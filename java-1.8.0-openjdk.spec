@@ -128,7 +128,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 1.%{buildver}%{?dist}
+Release: 2.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -507,17 +507,12 @@ bash ../../configure \
     --with-stdc++lib=dynamic \
     --with-num-cores="$NUM_PROC"
 
-# The combination of FULL_DEBUG_SYMBOLS=0 and ALT_OBJCOPY=/does_not_exist
-# disables FDS for all build configs and reverts to pre-FDS make logic.
-# STRIP_POLICY=none says don't do any stripping. DEBUG_BINARIES=true says
-# ignore all the other logic about which debug options and just do '-g'.
+# Set STRIP_POLICY and POST_STRIP_CMD to avoid stripping libraries
 
 make \
-    SCTP_WERROR= \
     DEBUG_BINARIES=true \
-    FULL_DEBUG_SYMBOLS=0 \
-    STRIP_POLICY=none \
-    ALT_OBJCOPY=/does_not_exist \
+    STRIP_POLICY=no_strip \
+    POST_STRIP_CMD="" \
     LOG=trace \
     all
 
@@ -1087,6 +1082,10 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Wed Apr 23 2014 Omair Majid <omajid@redhat.com> - 1:1.8.0.5-2.b13
+- Change make flags to fix debuginfo generation
+- Fix suggested by Yasumasa Suenaga
+
 * Wed Apr 16 2014 Omair Majid <omajid@redhat.com> - 1:1.8.0.5-1.b13
 - Update to the 2014-04-15 security update.
 
