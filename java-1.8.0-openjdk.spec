@@ -128,7 +128,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 3.%{buildver}%{?dist}
+Release: 4.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -192,6 +192,8 @@ Patch4: PStack-808293.patch
 Patch5: multiple-pkcs11-library-init.patch
 # Disable doclint for compatibility
 Patch6: disable-doclint-by-default.patch
+# Fix window activation in gnome shell
+Patch7: set-active-window.patch
 
 #
 # OpenJDK specific patches
@@ -421,6 +423,7 @@ sh %{SOURCE12}
 %patch4
 %patch5
 %patch6
+%patch7
 
 %patch99
 
@@ -1085,6 +1088,9 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Wed May 28 2014 Omair Majid <omajid@redhat.com> - 1:1.8.0.5-4.b13
+- Backport fix for JDK-8012224
+
 * Fri May 16 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.5-3.b13
 - Disable doclint for compatiblity
 - Patch contributed by Andrew John Hughes
