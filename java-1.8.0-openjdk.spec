@@ -3,10 +3,14 @@
 
 %global aarch64_hg_tag  992
 
-%global aarch64			aarch64 arm64 armv8
+%global aarch64         aarch64 arm64 armv8
 %global multilib_arches %{power64} sparc64 x86_64 %{aarch64}
-%global jit_arches		%{ix86} x86_64 sparcv9 sparc64 %{aarch64}
+%global jit_arches      %{ix86} x86_64 sparcv9 sparc64 %{aarch64}
 
+# sometimes we need to distinguish big and little endian PPC64
+# taken from the openjdk-1.7 spec
+%global ppc64le                 ppc64le
+%global ppc64be                 ppc64 ppc64p7
 
 %ifarch x86_64
 %global archinstall amd64
@@ -16,6 +20,9 @@
 %endif
 %ifarch %{power64}
 %global archinstall ppc64
+%endif
+%ifarch %{ppc64le}
+%global archinstall ppc64le
 %endif
 %ifarch %{ix86}
 %global archinstall i386
@@ -128,7 +135,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 1.%{buildver}%{?dist}
+Release: 5.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -149,7 +156,7 @@ URL:      http://openjdk.java.net/
 # ./generate_source_tarball.sh jdk8u jdk8u jdk8u%{updatever}-%{buildver}
 # ./generate_source_tarball.sh aarch64-port %{aarch64_hg_tag}
 Source0:  jdk8u-jdk8u%{updatever}-%{buildver}.tar.xz
-Source1:  aarch64-port-jdk8-%{aarch64_buildver}-aarch64-%{aarch64_hg_tag}.tar.xz
+Source1:  aarch64-hotspot-jdk8-%{aarch64_buildver}-aarch64-%{aarch64_hg_tag}.tar.xz
 
 # Custom README for -src subpackage
 Source2:  README.src
@@ -165,7 +172,7 @@ Source8: systemtap-tapset.tar.gz
 Source9: desktop-files.tar.gz
 
 # nss configuration file
-Source10: nss.cfg
+Source11: nss.cfg
 
 # Removed libraries that we link instead
 Source12: remove-intree-libraries.sh
@@ -215,9 +222,12 @@ Patch201: system-libjpeg.patch
 Patch202: system-libpng.patch
 Patch203: system-lcms.patch
 
+Patch999: 0001-PPC64LE-arch-support-in-openjdk-1.8.patch
+
 BuildRequires: autoconf
 BuildRequires: automake
 BuildRequires: alsa-lib-devel
+BuildRequires: binutils
 BuildRequires: cups-devel
 BuildRequires: desktop-file-utils
 BuildRequires: fontconfig
@@ -249,7 +259,7 @@ BuildRequires: libffi-devel
 BuildRequires: openssl
 # execstack build requirement.
 # no prelink on ARM yet
-%ifnarch %{arm} %{aarch64}
+%ifnarch %{arm} %{aarch64} %{ppc64le}
 BuildRequires: prelink
 %endif
 %if %{with_systemtap}
@@ -391,13 +401,13 @@ need to.
 
 
 %prep
+%setup -q -c -n %{name} -T -a 0
 %ifarch %{aarch64}
-%global source_num 1
-%else
-%global source_num 0
+pushd jdk8
+rm -r hotspot
+tar xf %{SOURCE1}
+popd
 %endif
-
-%setup -q -c -n %{name} -T -a %{source_num}
 cp %{SOURCE2} .
 
 # replace outdated configure guess script
@@ -437,6 +447,7 @@ sh %{SOURCE12}
 %ifarch ppc %{power64}
 # PPC fixes
 %patch103
+%patch999 -p1
 %endif
 
 # Extract systemtap tapsets
@@ -511,9 +522,14 @@ bash ../../configure \
     --with-libpng=system \
     --with-lcms=system \
     --with-stdc++lib=dynamic \
-    --with-num-cores="$NUM_PROC"
+    --with-num-cores="$NUM_PROC" \
+    --with-extra-cflags="-fno-devirtualize" \
+    --with-extra-cxxflags="-fno-devirtualize"
 
-# Set STRIP_POLICY and POST_STRIP_CMD to avoid stripping libraries
+# The combination of FULL_DEBUG_SYMBOLS=0 and ALT_OBJCOPY=/does_not_exist
+# disables FDS for all build configs and reverts to pre-FDS make logic.
+# STRIP_POLICY=none says don't do any stripping. DEBUG_BINARIES=true says
+# ignore all the other logic about which debug options and just do '-g'.
 
 make \
     DEBUG_BINARIES=true \
@@ -541,13 +557,27 @@ mv $JAVA_HOME/jre/bin/java $JAVA_HOME/jre/bin/java-abrt
 cat %{SOURCE3} | sed -e s:@JAVA_PATH@:%{_jvmdir}/%{jredir}/bin/java-abrt:g -e s:@LIB_DIR@:%{LIBDIR}/libabrt-java-connector.so:g > $JAVA_HOME/jre/bin/java
 chmod 755 $JAVA_HOME/jre/bin/java
 
-
-# Copy tz.properties
-echo "sun.zoneinfo.dir=/usr/share/javazi" >> $JAVA_HOME/jre/lib/tz.properties
+# Use system-wide tzdata
+rm $JAVA_HOME/jre/lib/tzdb.dat
+ln -s %{_datadir}/javazi-1.8/tzdb.dat $JAVA_HOME/jre/lib/tzdb.dat
 
 # Check unlimited policy has been used
 $JAVA_HOME/bin/javac -d . %{SOURCE13}
 $JAVA_HOME/bin/java TestCryptoLevel
+
+# Check debug symbols are present and can identify code
+SERVER_JVM="$JAVA_HOME/jre/lib/%{archinstall}/server/libjvm.so"
+if [ -f "$SERVER_JVM" ] ; then
+  nm -aCl "$SERVER_JVM" | grep javaCalls.cpp
+fi
+CLIENT_JVM="$JAVA_HOME/jre/lib/%{archinstall}/client/libjvm.so"
+if [ -f "$CLIENT_JVM" ] ; then
+  nm -aCl "$CLIENT_JVM" | grep javaCalls.cpp
+fi
+ZERO_JVM="$JAVA_HOME/jre/lib/%{archinstall}/zero/libjvm.so"
+if [ -f "$ZERO_JVM" ] ; then
+  nm -aCl "$ZERO_JVM" | grep javaCalls.cpp
+fi
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -648,7 +678,7 @@ popd
 
 
 # Install nss.cfg
-install -m 644 %{SOURCE10} $RPM_BUILD_ROOT%{_jvmdir}/%{jredir}/lib/security/
+install -m 644 %{SOURCE11} $RPM_BUILD_ROOT%{_jvmdir}/%{jredir}/lib/security/
 
 
 # Install Javadoc documentation.
@@ -1088,6 +1118,10 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Tue Jul 15 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.11-5.b12
+- Attempt to update aarch64 *jdk* to u11b12, by resticting aarch64 sources to hotpot only
+- partial sync with f21
+
 * Tue Jul 15 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.11-1.b12
 - updated to security u11b12
 
