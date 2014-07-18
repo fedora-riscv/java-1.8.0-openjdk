@@ -557,9 +557,9 @@ mv $JAVA_HOME/jre/bin/java $JAVA_HOME/jre/bin/java-abrt
 cat %{SOURCE3} | sed -e s:@JAVA_PATH@:%{_jvmdir}/%{jredir}/bin/java-abrt:g -e s:@LIB_DIR@:%{LIBDIR}/libabrt-java-connector.so:g > $JAVA_HOME/jre/bin/java
 chmod 755 $JAVA_HOME/jre/bin/java
 
-# Use system-wide tzdata
-rm $JAVA_HOME/jre/lib/tzdb.dat
-ln -s %{_datadir}/javazi-1.8/tzdb.dat $JAVA_HOME/jre/lib/tzdb.dat
+
+# Copy tz.properties
+echo "sun.zoneinfo.dir=/usr/share/javazi" >> $JAVA_HOME/jre/lib/tz.properties
 
 # Check unlimited policy has been used
 $JAVA_HOME/bin/javac -d . %{SOURCE13}
