@@ -3,10 +3,14 @@
 
 %global aarch64_hg_tag  992
 
-%global aarch64			aarch64 arm64 armv8
+%global aarch64         aarch64 arm64 armv8
 %global multilib_arches %{power64} sparc64 x86_64 %{aarch64}
-%global jit_arches		%{ix86} x86_64 sparcv9 sparc64 %{aarch64}
+%global jit_arches      %{ix86} x86_64 sparcv9 sparc64 %{aarch64}
 
+# sometimes we need to distinguish big and little endian PPC64
+# taken from the openjdk-1.7 spec
+%global ppc64le                 ppc64le
+%global ppc64be                 ppc64 ppc64p7
 
 %ifarch x86_64
 %global archinstall amd64
@@ -16,6 +20,9 @@
 %endif
 %ifarch %{power64}
 %global archinstall ppc64
+%endif
+%ifarch %{ppc64le}
+%global archinstall ppc64le
 %endif
 %ifarch %{ix86}
 %global archinstall i386
@@ -128,7 +135,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 1.%{buildver}%{?dist}
+Release: 7.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -149,7 +156,7 @@ URL:      http://openjdk.java.net/
 # ./generate_source_tarball.sh jdk8u jdk8u jdk8u%{updatever}-%{buildver}
 # ./generate_source_tarball.sh aarch64-port %{aarch64_hg_tag}
 Source0:  jdk8u-jdk8u%{updatever}-%{buildver}.tar.xz
-Source1:  aarch64-port-jdk8-%{aarch64_buildver}-aarch64-%{aarch64_hg_tag}.tar.xz
+Source1:  aarch64-hotspot-jdk8-%{aarch64_buildver}-aarch64-%{aarch64_hg_tag}.tar.xz
 
 # Custom README for -src subpackage
 Source2:  README.src
@@ -165,7 +172,7 @@ Source8: systemtap-tapset.tar.gz
 Source9: desktop-files.tar.gz
 
 # nss configuration file
-Source10: nss.cfg
+Source11: nss.cfg
 
 # Removed libraries that we link instead
 Source12: remove-intree-libraries.sh
@@ -211,9 +218,13 @@ Patch201: system-libjpeg.patch
 Patch202: system-libpng.patch
 Patch203: system-lcms.patch
 
+Patch999:  0001-PPC64LE-arch-support-in-openjdk-1.8.patch
+Patch9999: enableArm64.patch
+
 BuildRequires: autoconf
 BuildRequires: automake
 BuildRequires: alsa-lib-devel
+BuildRequires: binutils
 BuildRequires: cups-devel
 BuildRequires: desktop-file-utils
 BuildRequires: fontconfig
@@ -245,7 +256,7 @@ BuildRequires: libffi-devel
 BuildRequires: openssl
 # execstack build requirement.
 # no prelink on ARM yet
-%ifnarch %{arm} %{aarch64}
+%ifnarch %{arm} %{aarch64} %{ppc64le}
 BuildRequires: prelink
 %endif
 %if %{with_systemtap}
@@ -387,13 +398,13 @@ need to.
 
 
 %prep
+%setup -q -c -n %{name} -T -a 0
 %ifarch %{aarch64}
-%global source_num 1
-%else
-%global source_num 0
+pushd jdk8
+rm -r hotspot
+tar xf %{SOURCE1}
+popd
 %endif
-
-%setup -q -c -n %{name} -T -a %{source_num}
 cp %{SOURCE2} .
 
 # replace outdated configure guess script
@@ -407,6 +418,10 @@ cp %{SOURCE101} jdk8/common/autoconf/build-aux/
 
 # Remove libraries that are linked
 sh %{SOURCE12}
+
+%ifarch %{aarch64}
+%patch9999
+%endif
 
 %patch201
 %patch202
@@ -431,6 +446,7 @@ sh %{SOURCE12}
 %ifarch ppc %{power64}
 # PPC fixes
 %patch103
+%patch999 -p1
 %endif
 
 # Extract systemtap tapsets
@@ -482,10 +498,6 @@ pushd %{buildoutputdir}
 bash ../../configure \
 %ifnarch %{jit_arches}
     --with-jvm-variants=zero \
-%endif
-%ifarch %{aarch64}
-    --with-jvm-variants=client \
-    --disable-precompiled-headers \
 %endif
     --disable-zip-debug-info \
     --with-milestone="fcs" \
@@ -642,7 +654,7 @@ popd
 
 
 # Install nss.cfg
-install -m 644 %{SOURCE10} $RPM_BUILD_ROOT%{_jvmdir}/%{jredir}/lib/security/
+install -m 644 %{SOURCE11} $RPM_BUILD_ROOT%{_jvmdir}/%{jredir}/lib/security/
 
 
 # Install Javadoc documentation.
@@ -1082,6 +1094,13 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Mon Jul 21 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.11-7.b12
+- removed legacy aarch64 switches
+ - --with-jvm-variants=client and  --disable-precompiled-headers
+- added patch patch9999 enableArm64.patch to enable new hotspot
+- Attempt to update aarch64 *jdk* to u11b12, by resticting aarch64 sources to hotpot only
+- partial sync with f20
+
 * Tue Jul 15 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.11-1.b12
 - updated to security u11b12
 
