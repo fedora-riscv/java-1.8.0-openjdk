@@ -135,7 +135,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 7.%{buildver}%{?dist}
+Release: 8.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -221,6 +221,8 @@ Patch103: %{name}-ppc-zero-hotspot.patch
 Patch201: system-libjpeg.patch
 Patch202: system-libpng.patch
 Patch203: system-lcms.patch
+
+Patch210: include-all-srcs.patch
 
 Patch999:  0001-PPC64LE-arch-support-in-openjdk-1.8.patch
 Patch9999: enableArm64.patch
@@ -430,6 +432,8 @@ sh %{SOURCE12}
 %patch201
 %patch202
 %patch203
+
+%patch210
 
 
 %patch1
@@ -1119,6 +1123,10 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Fri Aug 15 2014 Omair Majid <omajid@redhat.com> - 1:1.8.0.11-8.b12
+- Include all sources in src.zip
+- Resolves rhbz#1130490
+
 * Mon Jul 21 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.11-7.b12
 - removed legacy aarch64 switches
  - --with-jvm-variants=client and  --disable-precompiled-headers
