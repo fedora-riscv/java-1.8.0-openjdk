@@ -135,7 +135,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 8.%{buildver}%{?dist}
+Release: 9.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -853,8 +853,8 @@ fi
 exit 0
 
 %postun headless
-if [ $1 -eq 0 ]
-then
+C=`alternatives --display  java | grep 1.8.0 | grep priority   | wc -l`
+if [ $C -gt 1 -o  $1 -eq 0 ] ; then
   alternatives --remove java %{jrebindir}/java
   alternatives --remove jre_%{origin} %{_jvmdir}/%{jrelnk}
   alternatives --remove jre_%{javaver} %{_jvmdir}/%{jrelnk}
@@ -977,8 +977,8 @@ update-desktop-database %{_datadir}/applications &> /dev/null || :
 exit 0
 
 %postun devel
-if [ $1 -eq 0 ]
-then
+C=`alternatives --display  javac | grep 1.8.0 | grep priority   | wc -l`
+if [ $C -gt 1 -o  $1 -eq 0 ] ; then
   alternatives --remove javac %{sdkbindir}/javac
   alternatives --remove java_sdk_%{origin} %{_jvmdir}/%{sdklnk}
   alternatives --remove java_sdk_%{javaver} %{_jvmdir}/%{sdklnk}
@@ -1005,11 +1005,10 @@ alternatives \
 exit 0
 
 %postun javadoc
-if [ $1 -eq 0 ]
-then
+C=`alternatives --display  javadocdir | grep 1.8.0 | grep priority   | wc -l`
+if [ $C -gt 1  -o  $1 -eq 0 ] ; then
   alternatives --remove javadocdir %{_javadocdir}/%{name}/api
 fi
-
 exit 0
 
 
@@ -1123,6 +1122,12 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Fri Aug 22 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.11-9.b12
+- fixed update to f21
+ - alternatrives forced to removal if there is more then one jdk even if it si update
+ - and of course in case of removal
+ - note: jdk f20 do not support multiple installs, jdk f21 do
+
 * Fri Aug 15 2014 Omair Majid <omajid@redhat.com> - 1:1.8.0.11-8.b12
 - Include all sources in src.zip
 - Resolves rhbz#1130490
