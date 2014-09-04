@@ -137,7 +137,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 3.%{buildver}%{?dist}
+Release: 4.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -543,6 +543,9 @@ pushd %{buildoutputdir}
 bash ../../configure \
 %ifnarch %{jit_arches}
     --with-jvm-variants=zero \
+%endif
+%ifarch %{ppc64le}
+    --with-jvm-interpreter=cpp \
 %endif
     --disable-zip-debug-info \
     --with-milestone="fcs" \
@@ -1337,6 +1340,9 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Thu Sep 04 2014 Omair Majid <omajid@redhat.com> - 1:1.8.0.20-4.b26
+- Use the cpp interpreter on ppc64le.
+
 * Wed Sep 03 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.20-3.b26
 - fixed RH1136544, orriginal issue, state of pc64le jit remians mistery
 
