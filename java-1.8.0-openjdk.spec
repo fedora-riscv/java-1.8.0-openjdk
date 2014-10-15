@@ -81,8 +81,8 @@
 
 # Standard JPackage naming and versioning defines.
 %global origin          openjdk
-%global updatever       20
-%global buildver        b26
+%global updatever       25
+%global buildver        b18
 %global aarch64_updatever 40
 %global aarch64_buildver b04
 %global aarch64_changesetid a6df78e590bb
@@ -123,7 +123,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 12.%{buildver}%{?dist}
+Release: 0.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -1334,6 +1334,9 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Wed Oct 15 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-0.b18
+- updated to security u25
+
 * Thu Oct 02 2014 Dan Horák <dan[at]danny.cz> - 1:1.8.0.20-12.b26
 - refresh the size_t patch for u20 from rhel7
 
