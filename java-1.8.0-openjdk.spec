@@ -1,16 +1,23 @@
 # If debug is 1, OpenJDK is built with all debug info present.
 %global debug 0
 
-%global aarch64_hg_tag  992
-
 %global aarch64         aarch64 arm64 armv8
-%global multilib_arches %{power64} sparc64 x86_64 %{aarch64}
-%global jit_arches      %{ix86} x86_64 sparcv9 sparc64 %{aarch64}
-
 # sometimes we need to distinguish big and little endian PPC64
-# taken from the openjdk-1.7 spec
-%global ppc64le                 ppc64le
-%global ppc64be                 ppc64 ppc64p7
+%global ppc64le         ppc64le
+%global ppc64be         ppc64 ppc64p7
+%global multilib_arches %{power64} sparc64 x86_64
+%global jit_arches      %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64}
+
+# With diabled nss is NSS deactivated, so in NSS_LIBDIR can be wrong path
+# the initialisation must be here. LAter the pkg-connfig have bugy behaviour
+#looks liekopenjdk RPM specific bug
+# Always set this so the nss.cfg file is not broken
+%global NSS_LIBDIR %(pkg-config --variable=libdir nss)
+
+#fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349
+%global _privatelibs libmawt[.]so.*
+%global __provides_exclude ^(%{_privatelibs})$
+%global __requires_exclude ^(%{_privatelibs})$
 
 %ifarch x86_64
 %global archinstall amd64
@@ -20,9 +27,6 @@
 %endif
 %ifarch %{power64}
 %global archinstall ppc64
-%endif
-%ifarch %{ppc64le}
-%global archinstall ppc64le
 %endif
 %ifarch %{ix86}
 %global archinstall i386
@@ -74,25 +78,14 @@
 %global script 'use File::Spec; print File::Spec->abs2rel($ARGV[0], $ARGV[1])'
 %global abs2rel %{__perl} -e %{script}
 
-# Hard-code libdir on 64-bit architectures to make the 64-bit JDK
-# simply be another alternative.
-%global LIBDIR %{_libdir}
-#backuped original one
-%ifarch %{multilib_arches}
-%global syslibdir       %{_prefix}/lib64
-%global _libdir         %{_prefix}/lib
-%global archname        %{name}.%{_arch}
-%else
-%global syslibdir       %{_libdir}
-%global archname        %{name}
-%endif
 
 # Standard JPackage naming and versioning defines.
 %global origin          openjdk
-%global updatever       11
-%global buildver        b12
-%global aarch64_updatever 0
-%global aarch64_buildver b128
+%global updatever       25
+%global buildver        b18
+%global aarch64_updatever 40
+%global aarch64_buildver b04
+%global aarch64_changesetid a6df78e590bb
 # priority must be 6 digits in total
 %global priority        000000
 %global javaver         1.8.0
@@ -135,7 +128,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 7.%{buildver}%{?dist}
+Release: 0.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -153,10 +146,10 @@ License:  ASL 1.1 and ASL 2.0 and GPL+ and GPLv2 and GPLv2 with exceptions and L
 URL:      http://openjdk.java.net/
 
 # Source from upstrem OpenJDK8 project. To regenerate, use
-# ./generate_source_tarball.sh jdk8u jdk8u jdk8u%{updatever}-%{buildver}
-# ./generate_source_tarball.sh aarch64-port %{aarch64_hg_tag}
+# ./generate_source_tarball.sh jdk8u jdk8u jdk8u%%{updatever}-%%{buildver}
+# ./generate_source_tarball.sh aarch64-port jdk8 %%{aarch64_hg_tag}
 Source0:  jdk8u-jdk8u%{updatever}-%{buildver}.tar.xz
-Source1:  aarch64-hotspot-jdk8-%{aarch64_buildver}-aarch64-%{aarch64_hg_tag}.tar.xz
+Source1:  aarch64-hotspot-jdk8u%{aarch64_updatever}-%{aarch64_buildver}-%{aarch64_changesetid}.tar.xz
 
 # Custom README for -src subpackage
 Source2:  README.src
@@ -189,36 +182,40 @@ Source101: config.sub
 # Ignore AWTError when assistive technologies are loaded 
 Patch1:   %{name}-accessible-toolkit.patch
 
-# RHBZ 1015432
-Patch2: 1015432.patch
 # Restrict access to java-atk-wrapper classes
 Patch3: java-atk-wrapper-security.patch
 # RHBZ 808293
 Patch4: PStack-808293.patch
 # Allow multiple initialization of PKCS11 libraries
 Patch5: multiple-pkcs11-library-init.patch
+# Disable doclint for compatibility
+Patch6: disable-doclint-by-default.patch
+# Include all sources in src.zip
+Patch7: include-all-srcs.patch
+# Problem discovered with make 4.0
+Patch11: hotspot-build-j-directive.patch
 
 #
 # OpenJDK specific patches
 #
-
 # Allow icedtea-web to build
 Patch99: applet-hole.patch
 
-# Recognize s390/s390x
-Patch100: %{name}-s390.patch
+# JVM heap size changes for s390 (thanks to aph)
+Patch100: %{name}-s390-java-opts.patch
 # Type fixing for s390
-Patch101: %{name}-bitmap.patch
 Patch102: %{name}-size_t.patch
-
-# Patch for PPC/PPC64
-Patch103: %{name}-ppc-zero-hotspot.patch
 
 Patch201: system-libjpeg.patch
 Patch202: system-libpng.patch
 Patch203: system-lcms.patch
 
-Patch999:  0001-PPC64LE-arch-support-in-openjdk-1.8.patch
+Patch300: jstack-pr1845.patch
+
+Patch400: ppc_stack_overflow_fix.patch 
+Patch401: fix_ZERO_ARCHDEF_ppc.patch
+Patch402: atomic_linux_zero.inline.hpp.patch
+
 Patch9999: enableArm64.patch
 
 BuildRequires: autoconf
@@ -241,6 +238,8 @@ BuildRequires: libXi-devel
 BuildRequires: libXinerama-devel
 BuildRequires: libXt-devel
 BuildRequires: libXtst-devel
+# Requirements for setting up the nss.cfg
+BuildRequires: nss-devel
 BuildRequires: pkgconfig
 BuildRequires: xorg-x11-proto-devel
 #BuildRequires: redhat-lsb
@@ -301,7 +300,7 @@ Provides: jre8-%{javaver}-%{origin}-headless = %{epoch}:%{version}-%{release}
 Provides: jre8-%{origin}-headless = %{epoch}:%{version}-%{release}
 Provides: jre8-%{javaver}-headless = %{epoch}:%{version}-%{release}
 Provides: java8-%{javaver}-headless = %{epoch}:%{version}-%{release}
-Provides: jre8-headless = %{javaver}
+Provides: jre8-headless = %{epoch}:%{javaver}
 Provides: java8-%{origin}-headless = %{epoch}:%{version}-%{release}
 Provides: java8-headless = %{epoch}:%{javaver}
 # Standard JPackage extensions provides.
@@ -318,7 +317,6 @@ Provides: java8-sasl = %{epoch}:%{version}
 
 %description headless
 The OpenJDK runtime environment without audio and video support.
-
 
 %package devel
 Summary: OpenJDK Development Environment
@@ -427,32 +425,31 @@ sh %{SOURCE12}
 %patch202
 %patch203
 
-
 %patch1
-%patch2
 %patch3
 %patch4
 %patch5
 
 %patch99
 
-# Type fixes for s390
-%ifarch s390 s390x
+# s390 build fixes
+%ifarch s390
 %patch100
-%patch101
 %patch102
 %endif
 
-%ifarch ppc %{power64}
-# PPC fixes
-%patch103
-%patch999 -p1
-%endif
+# Zero PPC fixes.
+#  TODO: propose them upstream
+%patch400
+%patch401
+%patch402
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
 
 tar xzf %{SOURCE8}
+
+%patch300
 
 for file in tapset/*.in; do
 
@@ -487,6 +484,19 @@ export ARCH_DATA_MODEL=64
 export CFLAGS="$CFLAGS -mieee"
 %endif
 
+EXTRA_CFLAGS="-fstack-protector-strong"
+#see https://bugzilla.redhat.com/show_bug.cgi?id=1120792
+EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-devirtualize" 
+EXTRA_CPP_FLAGS="-fno-devirtualize"
+# PPC/PPC64 needs -fno-tree-vectorize since -O3 would
+# otherwise generate wrong code producing segfaults.
+%ifarch %{power64} ppc
+EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-tree-vectorize"
+# fix rpmlint warnings
+EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-strict-aliasing"
+%endif
+export EXTRA_CFLAGS
+
 (cd jdk8/common/autoconf
  bash ./autogen.sh
 )
@@ -499,14 +509,15 @@ bash ../../configure \
 %ifnarch %{jit_arches}
     --with-jvm-variants=zero \
 %endif
+%ifarch %{ppc64le}
+    --with-jvm-interpreter=cpp \
+%endif
     --disable-zip-debug-info \
     --with-milestone="fcs" \
-%ifnarch %{aarch64}
     --with-update-version=%{updatever} \
     --with-build-number=%{buildver} \
-%else
-    --with-build-number=%{aarch64_buildver} \
-    --with-user-release-suffix="aarch64-%{aarch64_hg_tag}" \
+%ifarch %{aarch64}
+    --with-user-release-suffix="aarch64-%{aarch64_updatever}-%{aarch64_buildver}-%{aarch64_changesetid}" \
 %endif
     --with-boot-jdk=/usr/lib/jvm/java-openjdk \
     --with-debug-level=%{debugbuild} \
@@ -517,9 +528,14 @@ bash ../../configure \
     --with-libpng=system \
     --with-lcms=system \
     --with-stdc++lib=dynamic \
+    --with-extra-cxxflags="$EXTRA_CPP_FLAGS" \
+    --with-extra-cflags="$EXTRA_CFLAGS" \
     --with-num-cores="$NUM_PROC"
 
-# Set STRIP_POLICY and POST_STRIP_CMD to avoid stripping libraries
+# The combination of FULL_DEBUG_SYMBOLS=0 and ALT_OBJCOPY=/does_not_exist
+# disables FDS for all build configs and reverts to pre-FDS make logic.
+# STRIP_POLICY=none says don't do any stripping. DEBUG_BINARIES=true says
+# ignore all the other logic about which debug options and just do '-g'.
 
 make \
     DEBUG_BINARIES=true \
@@ -540,11 +556,15 @@ find images/j2sdk-image -iname '*.debuginfo' -exec rm {} \;
 
 popd >& /dev/null
 
+# Install nss.cfg right away as we will be using the JRE above
 export JAVA_HOME=$(pwd)/%{buildoutputdir}/images/j2sdk-image
+
+# Install nss.cfg right away as we will be using the JRE above
+install -m 644 %{SOURCE11} $JAVA_HOME/jre/lib/security/
 
 # Install java-abrt-luncher
 mv $JAVA_HOME/jre/bin/java $JAVA_HOME/jre/bin/java-abrt
-cat %{SOURCE3} | sed -e s:@JAVA_PATH@:%{_jvmdir}/%{jredir}/bin/java-abrt:g -e s:@LIB_DIR@:%{LIBDIR}/libabrt-java-connector.so:g > $JAVA_HOME/jre/bin/java
+cat %{SOURCE3} | sed -e s:@JAVA_PATH@:%{_jvmdir}/%{jredir}/bin/java-abrt:g -e s:@LIB_DIR@:%{_libdir}/libabrt-java-connector.so:g > $JAVA_HOME/jre/bin/java
 chmod 755 $JAVA_HOME/jre/bin/java
 
 
@@ -554,6 +574,20 @@ echo "sun.zoneinfo.dir=/usr/share/javazi" >> $JAVA_HOME/jre/lib/tz.properties
 # Check unlimited policy has been used
 $JAVA_HOME/bin/javac -d . %{SOURCE13}
 $JAVA_HOME/bin/java TestCryptoLevel
+
+# Check debug symbols are present and can identify code
+SERVER_JVM="$JAVA_HOME/jre/lib/%{archinstall}/server/libjvm.so"
+if [ -f "$SERVER_JVM" ] ; then
+  nm -aCl "$SERVER_JVM" | grep javaCalls.cpp
+fi
+CLIENT_JVM="$JAVA_HOME/jre/lib/%{archinstall}/client/libjvm.so"
+if [ -f "$CLIENT_JVM" ] ; then
+  nm -aCl "$CLIENT_JVM" | grep javaCalls.cpp
+fi
+ZERO_JVM="$JAVA_HOME/jre/lib/%{archinstall}/zero/libjvm.so"
+if [ -f "$ZERO_JVM" ] ; then
+  nm -aCl "$ZERO_JVM" | grep javaCalls.cpp
+fi
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -685,7 +719,7 @@ find $RPM_BUILD_ROOT%{_jvmdir}/%{jredir} -type f -o -type l \
   | grep -v jre/lib/security \
   | sed 's|'$RPM_BUILD_ROOT'||' \
   >> %{name}.files.all
-#split %{name}.files to %{name}.files-headless and %{name}.files
+#split %%{name}.files to %%{name}.files-headless and %%{name}.files
 #see https://bugzilla.redhat.com/show_bug.cgi?id=875408
 NOT_HEADLESS=\
 "%{_jvmdir}/%{jredir}/lib/%{archinstall}/libjsoundalsa.so
@@ -693,19 +727,19 @@ NOT_HEADLESS=\
 %{_jvmdir}/%{jredir}/lib/%{archinstall}/libsplashscreen.so
 %{_jvmdir}/%{jredir}/lib/%{archinstall}/libawt_xawt.so
 %{_jvmdir}/%{jredir}/lib/%{archinstall}/libjawt.so"
-#filter %{name}.files from %{name}.files.all to %{name}.files-headless
+#filter %%{name}.files from %%{name}.files.all to %%{name}.files-headless
 ALL=`cat %{name}.files.all`
 for file in $ALL ; do
-    INLCUDE="NO" ;
-    for blacklist in $NOT_HEADLESS ; do
-    # we can not match normally, because rpmbuild will evaluate !0 result as script failure
+  INLCUDE="NO" ;
+  for blacklist in $NOT_HEADLESS ; do
+#we can not match normally, because rpmbuild will evaluate !0 result as script failure
     q=`expr match "$file" "$blacklist"` || :
-    l=`expr length "$blacklist"` || :
-    if [ $q -eq $l ]; then
-        INLCUDE="YES" ;
+    l=`expr length  "$blacklist"` || :
+    if [ $q -eq $l  ]; then 
+      INLCUDE="YES" ; 
     fi;
 done
-if [ "x$INLCUDE" = "xNO" ]; then
+if [ "x$INLCUDE" = "xNO"  ]; then 
     echo "$file" >> %{name}.files-headless
 else
     echo "$file" >> %{name}.files
@@ -740,10 +774,10 @@ find $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir}/demo \
 # Create links which leads to separately installed java-atk-bridge and allow configuration
 # links points to java-atk-wrapper - an dependence
   pushd $RPM_BUILD_ROOT/%{_jvmdir}/%{jredir}/lib/%{archinstall}
-    ln -s %{syslibdir}/java-atk-wrapper/libatk-wrapper.so.0 libatk-wrapper.so
+    ln -s %{_libdir}/java-atk-wrapper/libatk-wrapper.so.0 libatk-wrapper.so
   popd
   pushd $RPM_BUILD_ROOT/%{_jvmdir}/%{jredir}/lib/ext
-     ln -s %{syslibdir}/java-atk-wrapper/java-atk-wrapper.jar  java-atk-wrapper.jar
+     ln -s %{_libdir}/java-atk-wrapper/java-atk-wrapper.jar  java-atk-wrapper.jar
   popd
   pushd $RPM_BUILD_ROOT/%{_jvmdir}/%{jredir}/lib/
     echo "#Config file to  enable java-atk-wrapper" > accessibility.properties
@@ -824,8 +858,8 @@ fi
 exit 0
 
 %postun headless
-if [ $1 -eq 0 ]
-then
+C=`alternatives --display  java | grep 1.8.0 | grep priority   | wc -l`
+if [ $C -gt 1 -o  $1 -eq 0 ] ; then
   alternatives --remove java %{jrebindir}/java
   alternatives --remove jre_%{origin} %{_jvmdir}/%{jrelnk}
   alternatives --remove jre_%{javaver} %{_jvmdir}/%{jrelnk}
@@ -948,8 +982,8 @@ update-desktop-database %{_datadir}/applications &> /dev/null || :
 exit 0
 
 %postun devel
-if [ $1 -eq 0 ]
-then
+C=`alternatives --display  javac | grep 1.8.0 | grep priority   | wc -l`
+if [ $C -gt 1 -o  $1 -eq 0 ] ; then
   alternatives --remove javac %{sdkbindir}/javac
   alternatives --remove java_sdk_%{origin} %{_jvmdir}/%{sdklnk}
   alternatives --remove java_sdk_%{javaver} %{_jvmdir}/%{sdklnk}
@@ -962,11 +996,11 @@ if [ $1 -eq 0 ] ; then
   /usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 fi
 
-
 exit 0
 
 %posttrans devel
 /usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
+
 
 %post javadoc
 alternatives \
@@ -976,11 +1010,10 @@ alternatives \
 exit 0
 
 %postun javadoc
-if [ $1 -eq 0 ]
-then
+C=`alternatives --display  javadocdir | grep 1.8.0 | grep priority   | wc -l`
+if [ $C -gt 1  -o  $1 -eq 0 ] ; then
   alternatives --remove javadocdir %{_javadocdir}/%{name}/api
 fi
-
 exit 0
 
 
@@ -993,7 +1026,6 @@ exit 0
 %doc %{buildoutputdir}/images/j2sdk-image/jre/ASSEMBLY_EXCEPTION
 %doc %{buildoutputdir}/images/j2sdk-image/jre/LICENSE
 %doc %{buildoutputdir}/images/j2sdk-image/jre/THIRD_PARTY_README
-
 %dir %{_jvmdir}/%{sdkdir}
 %{_jvmdir}/%{jrelnk}
 %{_jvmjardir}/%{jrelnk}
@@ -1094,6 +1126,10 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Wed Oct 15 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-0.b18
+- updated to security u25
+- sync with f20
+
 * Mon Jul 21 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.11-7.b12
 - removed legacy aarch64 switches
  - --with-jvm-variants=client and  --disable-precompiled-headers
