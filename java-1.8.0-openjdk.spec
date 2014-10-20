@@ -128,7 +128,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 0.%{buildver}%{?dist}
+Release: 1.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -429,6 +429,9 @@ sh %{SOURCE12}
 %patch3
 %patch4
 %patch5
+%patch6
+%patch7
+%patch11
 
 %patch99
 
@@ -1126,6 +1129,9 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Mon Oct 20 2014 Omair Majid <omajid@redhat.com> - 1:1.8.0.25-1.b18
+- Apply patches accidentally left out
+
 * Wed Oct 15 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-0.b18
 - updated to security u25
 - partial sync with f21
