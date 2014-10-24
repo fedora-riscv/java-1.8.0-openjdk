@@ -429,6 +429,9 @@ sh %{SOURCE12}
 %patch3
 %patch4
 %patch5
+%patch6
+%patch7
+%patch11
 %patch12
 
 %patch99
@@ -1134,6 +1137,9 @@ exit 0
 - added patch12,removeSunEcProvider-RH1154143
 - Add check for src.zip completeness. See RH1130490 (by sgehwolf@redhat.com)
 - Resolves: rhbz#1125260
+
+* Mon Oct 20 2014 Omair Majid <omajid@redhat.com> - 1:1.8.0.25-1.b18
+- Apply patches accidentally left out
 
 * Wed Oct 15 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-0.b18
 - updated to security u25
