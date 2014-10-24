@@ -128,7 +128,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 0.%{buildver}%{?dist}
+Release: 1.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -194,6 +194,7 @@ Patch6: disable-doclint-by-default.patch
 Patch7: include-all-srcs.patch
 # Problem discovered with make 4.0
 Patch11: hotspot-build-j-directive.patch
+Patch12: removeSunEcProvider-RH1154143.patch
 
 #
 # OpenJDK specific patches
@@ -278,7 +279,6 @@ Provides: java8-fonts = %{epoch}:%{version}
 
 %description
 The OpenJDK runtime environment.
-
 
 %package headless
 Summary: OpenJDK Runtime Environment
@@ -429,6 +429,7 @@ sh %{SOURCE12}
 %patch3
 %patch4
 %patch5
+%patch12
 
 %patch99
 
@@ -588,6 +589,9 @@ ZERO_JVM="$JAVA_HOME/jre/lib/%{archinstall}/zero/libjvm.so"
 if [ -f "$ZERO_JVM" ] ; then
   nm -aCl "$ZERO_JVM" | grep javaCalls.cpp
 fi
+
+# Check src.zip has all sources. See RHBZ#1130490
+jar -tf $JAVA_HOME/src.zip | grep Unsafe
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -1126,6 +1130,11 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Fri Oct 24 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-1.b18
+- added patch12,removeSunEcProvider-RH1154143
+- Add check for src.zip completeness. See RH1130490 (by sgehwolf@redhat.com)
+- Resolves: rhbz#1125260
+
 * Wed Oct 15 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-0.b18
 - updated to security u25
 - partial sync with f21
