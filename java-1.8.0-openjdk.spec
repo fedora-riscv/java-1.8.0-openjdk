@@ -128,7 +128,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 0.%{buildver}%{?dist}
+Release: 2.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -194,6 +194,7 @@ Patch6: disable-doclint-by-default.patch
 Patch7: include-all-srcs.patch
 # Problem discovered with make 4.0
 Patch11: hotspot-build-j-directive.patch
+Patch12: removeSunEcProvider-RH1154143.patch
 
 #
 # OpenJDK specific patches
@@ -278,7 +279,6 @@ Provides: java8-fonts = %{epoch}:%{version}
 
 %description
 The OpenJDK runtime environment.
-
 
 %package headless
 Summary: OpenJDK Runtime Environment
@@ -429,6 +429,10 @@ sh %{SOURCE12}
 %patch3
 %patch4
 %patch5
+%patch6
+%patch7
+%patch11
+%patch12
 
 %patch99
 
@@ -588,6 +592,9 @@ ZERO_JVM="$JAVA_HOME/jre/lib/%{archinstall}/zero/libjvm.so"
 if [ -f "$ZERO_JVM" ] ; then
   nm -aCl "$ZERO_JVM" | grep javaCalls.cpp
 fi
+
+# Check src.zip has all sources. See RHBZ#1130490
+jar -tf $JAVA_HOME/src.zip | grep Unsafe
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -1126,19 +1133,50 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Fri Oct 24 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-2.b18
+- added patch12,removeSunEcProvider-RH1154143
+- Add check for src.zip completeness. See RH1130490 (by sgehwolf@redhat.com)
+- Resolves: rhbz#1125260
+
+* Mon Oct 20 2014 Omair Majid <omajid@redhat.com> - 1:1.8.0.25-1.b18
+- Apply patches accidentally left out
+
 * Wed Oct 15 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-0.b18
 - updated to security u25
-- sync with f20
+- partial sync with f21
+
+* Wed Sep 17 2014 Omair Majid <omajid@redhat.com> - 1:1.8.0.10-10.b26
+- Remove LIBDIR and funny definition of _libdir.
+- Fix rpmlint warnings about macros in comments.
+
+* Fri Aug 22 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.11-9.b12
+- fixed update to f21
+ - alternatrives forced to removal if there is more then one jdk even if it si update
+ - and of course in case of removal
+ - note: jdk f20 do not support multiple installs, jdk f21 do
+
+* Fri Aug 15 2014 Omair Majid <omajid@redhat.com> - 1:1.8.0.11-8.b12
+- Include all sources in src.zip
+- Resolves rhbz#1130490
 
 * Mon Jul 21 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.11-7.b12
 - removed legacy aarch64 switches
  - --with-jvm-variants=client and  --disable-precompiled-headers
 - added patch patch9999 enableArm64.patch to enable new hotspot
+
+* Tue Jul 15 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.11-5.b12
 - Attempt to update aarch64 *jdk* to u11b12, by resticting aarch64 sources to hotpot only
-- partial sync with f20
+- partial sync with f21
 
 * Tue Jul 15 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.11-1.b12
 - updated to security u11b12
+
+* Wed May 28 2014 Omair Majid <omajid@redhat.com> - 1:1.8.0.5-4.b13
+- Backport fix for JDK-8012224
+
+* Fri May 16 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.5-3.b13
+- Disable doclint for compatiblity
+- Patch contributed by Andrew John Hughes
 
 * Wed Apr 23 2014 Omair Majid <omajid@redhat.com> - 1:1.8.0.5-2.b13
 - Change make flags to fix debuginfo generation
@@ -1228,7 +1266,7 @@ exit 0
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
 
 * Fri Aug 02 2013 Deepak Bhole <dbhole@redhat.com> - 1:1.8.0.0-0.15.b89
-- Added a missing includes patch (#302/%{name}-arm64-missing-includes.patch)
+- Added a missing includes patch (#302/%%{name}-arm64-missing-includes.patch)
 - Added --disable-precompiled-headers for arm64 build
 
 * Mon Jul 29 2013 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.0-0.14.b89
