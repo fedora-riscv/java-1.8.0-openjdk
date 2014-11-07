@@ -123,7 +123,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 3.%{buildver}%{?dist}
+Release: 4.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -278,7 +278,8 @@ Provides: java = %{epoch}:%{javaver}
 Provides: java-fonts = %{epoch}:%{version}
 
 Obsoletes: java-1.7.0-openjdk
-Provides:  java-1.8.0-openjdk = %{epoch}:%{version}-%{release}
+Obsoletes: java-1.5.0-gcj
+Obsoletes: sinjdoc
 
 %description
 The OpenJDK runtime environment.
@@ -319,7 +320,6 @@ Provides: jdbc-stdext = 4.1
 Provides: java-sasl = %{epoch}:%{version}
 
 Obsoletes: java-1.7.0-openjdk-headless
-Provides: java-1.8.0-openjdk-headless = %{epoch}:%{version}-%{release}
 
 %description headless
 The OpenJDK runtime environment without audio and video support.
@@ -346,7 +346,7 @@ Provides: java-devel-%{origin} = %{epoch}:%{version}
 Provides: java-devel = %{epoch}:%{javaver}
 
 Obsoletes: java-1.7.0-openjdk-devel
-Provides: java-1.8.0-openjdk-devel = %{epoch}:%{version}-%{release}
+Obsoletes: java-1.5.0-gcj-devel
 
 %description devel
 The OpenJDK development tools.
@@ -359,7 +359,6 @@ Requires: %{name} = %{epoch}:%{version}-%{release}
 OrderWithRequires: %{name}-headless = %{epoch}:%{version}-%{release}
 
 Obsoletes: java-1.7.0-openjdk-demo
-Provides: java-1.8.0-openjdk-demo = %{epoch}:%{version}-%{release}
 
 %description demo
 The OpenJDK demos.
@@ -371,7 +370,6 @@ Group:   Development/Languages
 Requires: %{name} = %{epoch}:%{version}-%{release}
 
 Obsoletes: java-1.7.0-openjdk-src
-Provides: java-1.8.0-openjdk-src = %{epoch}:%{version}-%{release}
 
 %description src
 The OpenJDK source bundle.
@@ -393,7 +391,6 @@ Provides: java-javadoc = %{epoch}:%{version}-%{release}
 Provides: java-%{javaver}-javadoc = %{epoch}:%{version}-%{release}
 
 Obsoletes: java-1.7.0-openjdk-javadoc
-Provides: java-1.8.0-openjdk-javadoc = %{epoch}:%{version}-%{release}
 
 %description javadoc
 The OpenJDK API documentation.
@@ -405,7 +402,6 @@ Requires: %{name} = %{epoch}:%{version}-%{release}
 OrderWithRequires: %{name}-headless = %{epoch}:%{version}-%{release}
 
 Obsoletes: java-1.7.0-openjdk-accessibility
-Provides: java-1.8.0-openjdk-accessibility = %{epoch}:%{version}-%{release}
 
 %description accessibility
 Enables accessibility support in OpenJDK by using java-atk-wrapper. This allows
@@ -1341,6 +1337,10 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Fri Nov 07 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-4.b12
+- obsoleted gcj and sindoc. rh1149674 and rh1149675
+- removed all provides duplicating package name
+
 * Mon Nov 03 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-3.b12
 - updated aarch64 tarball to u40b12
 
