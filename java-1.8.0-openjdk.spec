@@ -85,7 +85,7 @@
 %global buildver        b18
 %global aarch64_updatever 40
 %global aarch64_buildver b12
-%global aarch64_changesetid aarch64
+%global aarch64_changesetid aarch64-1263
 # priority must be 6 digits in total
 %global priority        18000%{updatever}
 %global javaver         1.8.0
@@ -123,7 +123,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 4.%{buildver}%{?dist}
+Release: 5.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -1337,6 +1337,9 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Fri Nov 07 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-5.b12
+- updated arm64 tarball to jdk8-jdk8u40-b12-aarch64-1263.tar.xz
+
 * Fri Nov 07 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-4.b12
 - obsoleted gcj and sindoc. rh1149674 and rh1149675
 - removed all provides duplicating package name
