@@ -81,11 +81,11 @@
 
 # Standard JPackage naming and versioning defines.
 %global origin          openjdk
-%global updatever       25
-%global buildver        b18
+%global updatever       31
+%global buildver        b13
 %global aarch64_updatever 40
 %global aarch64_buildver b12
-%global aarch64_changesetid aarch64-1263
+%global aarch64_changesetid aarch64-hs3135441ed942
 # priority must be 6 digits in total
 %global priority        000000
 %global javaver         1.8.0
@@ -128,7 +128,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 4.%{buildver}%{?dist}
+Release: 1.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -213,8 +213,14 @@ Patch203: system-lcms.patch
 
 Patch300: jstack-pr1845.patch
 
+# Fixed in upstream 9. See upstream bug:
+# https://bugs.openjdk.java.net/browse/JDK-8064815
 Patch400: ppc_stack_overflow_fix.patch 
+# Fixed in upstream 9. See upstream bug:
+# https://bugs.openjdk.java.net/browse/JDK-8067330
 Patch401: fix_ZERO_ARCHDEF_ppc.patch
+# Fixed in upstream 9. See upstream bug:
+# https://bugs.openjdk.java.net/browse/JDK-8067331
 Patch402: atomic_linux_zero.inline.hpp.patch
 
 Patch9999: enableArm64.patch
@@ -1133,6 +1139,9 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Mon Jan 12 2015 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.31-1.b13
+- Update to January CPU patch update.
+
 * Fri Nov 07 2014 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-4.b12
 - updated arm64 tarball to jdk8-jdk8u40-b12-aarch64-1263.tar.xz
 
