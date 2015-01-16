@@ -123,7 +123,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 1.%{buildver}%{?dist}
+Release: 2.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -1002,6 +1002,22 @@ exit 0
 # FIXME: identical binaries are copied, not linked. This needs to be
 # fixed upstream.
 %post headless
+# The pretrans lua scriptlet prevents an unmodified java.security
+# from being replaced via an update. It gets created as
+# java.security.rpmnew instead. This invalidates the patch of
+# JDK-8061210 of the January 2015 CPU. We fix this via a
+# post scriptlet which runs on updates.
+if [ "$1" -gt 1 ]; then
+  javasecurity="%{_jvmdir}/%{uniquesuffix}/jre/lib/security/java.security"
+  sum=$(md5sum "${javasecurity}" | cut -d' ' -f1)
+  # This is the md5sum of an unmodified java.security file
+  if [ "${sum}" = '1690ac33955594f71dc952c9e83fd396' ]; then
+    if [ -f "${javasecurity}.rpmnew" ]; then
+      mv -f "${javasecurity}.rpmnew" "${javasecurity}"
+    fi
+  fi
+fi
+
 %ifarch %{jit_arches}
 %ifnarch %{ppc64le}
 #see https://bugzilla.redhat.com/show_bug.cgi?id=513605
@@ -1343,6 +1359,9 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Wed Jan 21 2015 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.31-2.b13
+- Replace unmodified java.security file via headless post scriptlet.
+
 * Mon Jan 12 2015 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.31-1.b13
 - Update to January CPU patch update.
 
