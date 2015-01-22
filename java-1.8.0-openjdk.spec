@@ -123,7 +123,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 2.%{buildver}%{?dist}
+Release: 3.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -1010,8 +1010,10 @@ exit 0
 if [ "$1" -gt 1 ]; then
   javasecurity="%{_jvmdir}/%{uniquesuffix}/jre/lib/security/java.security"
   sum=$(md5sum "${javasecurity}" | cut -d' ' -f1)
-  # This is the md5sum of an unmodified java.security file
-  if [ "${sum}" = '1690ac33955594f71dc952c9e83fd396' ]; then
+  # Check against md5sum's of shipped and unmodified java.security files:
+  # java-1.8.0-openjdk-headless >= 1.8.0.25-2.b18: e63335add7d93bc42637d2a90880da57
+  # java-1.8.0-openjdk-headless <  1.8.0.25-2.b18: 1690ac33955594f71dc952c9e83fd396
+  if [ "${sum}" = '1690ac33955594f71dc952c9e83fd396' ] || [ "${sum}" = 'e63335add7d93bc42637d2a90880da57' ]; then
     if [ -f "${javasecurity}.rpmnew" ]; then
       mv -f "${javasecurity}.rpmnew" "${javasecurity}"
     fi
@@ -1359,6 +1361,9 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Thu Jan 22 2015 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.31-3.b13
+- Check for one additional md5sum in post scriptlet.
+
 * Wed Jan 21 2015 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.31-2.b13
 - Replace unmodified java.security file via headless post scriptlet.
 
