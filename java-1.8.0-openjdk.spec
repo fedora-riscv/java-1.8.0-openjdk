@@ -86,7 +86,7 @@
 %global aarch64_updatever 40
 %global aarch64_buildver b12
 %global aarch64_changesetid aarch64-hs3135441ed942
-# priority must be 6 digits in total
+# priority must be 7 digits in total
 %global priority        18000%{updatever}
 %global javaver         1.8.0
 
@@ -123,7 +123,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 3.%{buildver}%{?dist}
+Release: 4.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -167,6 +167,8 @@ Source12: remove-intree-libraries.sh
 
 # Ensure we aren't using the limited crypto policy
 Source13: TestCryptoLevel.java
+
+Source20: repackReproduciblePolycies.sh
 
 # New versions of config files with aarch64 support. This is not upstream yet.
 Source100: config.guess
@@ -422,6 +424,11 @@ need to.
 
 %prep
 %setup -q -c -n %{uniquesuffix} -T -a 0
+prioritylength=`expr length %{priority}`
+if [ $prioritylength -ne 7 ] ; then
+ echo "priority must be 7 digits in total, violated"
+ exit 14
+fi
 %ifarch %{aarch64}
 pushd jdk8
 rm -r hotspot
@@ -821,6 +828,8 @@ find $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir}/demo \
     echo "assistive_technologies=org.GNOME.Accessibility.AtkWrapper" >> accessibility.properties
     echo "" >> accessibility.properties
   popd
+
+bash %{SOURCE20} $RPM_BUILD_ROOT/%{_jvmdir}/%{jredir} %{javaver}
 
 %pretrans headless -p <lua>
 -- see https://bugzilla.redhat.com/show_bug.cgi?id=1038092 for whole issue 
@@ -1361,6 +1370,11 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Thu Feb 12 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-4.b12
+- policies repacked to stop spamming yum update
+- added and used source20 repackReproduciblePolycies.sh
+- added mehanism to force priority size
+
 * Thu Jan 22 2015 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.31-3.b13
 - Check for one additional md5sum in post scriptlet.
 
