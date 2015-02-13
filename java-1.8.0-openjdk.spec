@@ -424,6 +424,7 @@ need to.
 
 %prep
 %setup -q -c -n %{uniquesuffix} -T -a 0
+# https://bugzilla.redhat.com/show_bug.cgi?id=1189084
 prioritylength=`expr length %{priority}`
 if [ $prioritylength -ne 7 ] ; then
  echo "priority must be 7 digits in total, violated"
