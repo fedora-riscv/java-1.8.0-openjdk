@@ -123,7 +123,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 4.%{buildver}%{?dist}
+Release: 5.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -581,6 +581,7 @@ bash ../../configure \
 
 make \
     DEBUG_BINARIES=true \
+    JAVAC_FLAGS=-g \
     STRIP_POLICY=no_strip \
     POST_STRIP_CMD="" \
     LOG=trace \
@@ -628,7 +629,17 @@ if [ -f "$ZERO_JVM" ] ; then
 fi
 
 # Check src.zip has all sources. See RHBZ#1130490
-jar -tf $JAVA_HOME/src.zip | grep Unsafe
+jar -tf $JAVA_HOME/src.zip | grep 'sun.misc.Unsafe'
+
+# Check class files include useful debugging information
+$JAVA_HOME/bin/javap -l java.lang.Object | grep "Compiled from"
+$JAVA_HOME/bin/javap -l java.lang.Object | grep LineNumberTable
+$JAVA_HOME/bin/javap -l java.lang.Object | grep LocalVariableTable
+
+# Check generated class files include useful debugging information
+$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep "Compiled from"
+$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LineNumberTable
+$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LocalVariableTable
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -1078,7 +1089,7 @@ for X in %{origin} %{javaver} ; do
     --install %{_jvmdir}/jre-"$X" \
     jre_"$X" %{_jvmdir}/%{jredir} %{priority} \
     --slave %{_jvmjardir}/jre-"$X" \
-    jre_"$X"_exports %{_jvmjardir}/%{jredir}
+    jre_"$X"_exports %{_jvmdir}/%{jredir}
 done
 
 update-alternatives --install %{_jvmdir}/jre-%{javaver}-%{origin} jre_%{javaver}_%{origin} %{_jvmdir}/%{jrelnk} %{priority} \
