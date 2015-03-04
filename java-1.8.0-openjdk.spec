@@ -719,6 +719,7 @@ Patch102: %{name}-size_t.patch
 Patch201: system-libjpeg.patch
 Patch202: system-libpng.patch
 Patch203: system-lcms.patch
+Patch204: zero-interpreter-fix.patch
 
 Patch300: jstack-pr1845.patch
 
@@ -986,6 +987,9 @@ sh %{SOURCE12}
 %patch201
 %patch202
 %patch203
+%ifnarch %{aarch64}
+%patch204
+%endif
 
 %patch1
 %patch3
@@ -1065,8 +1069,8 @@ export CFLAGS="$CFLAGS -mieee"
 
 EXTRA_CFLAGS="-fstack-protector-strong"
 #see https://bugzilla.redhat.com/show_bug.cgi?id=1120792
-EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-devirtualize" 
-EXTRA_CPP_FLAGS="-fno-devirtualize"
+EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-devirtualize -Wno-return-local-addr"
+EXTRA_CPP_FLAGS="-fno-devirtualize -Wno-return-local-addr"
 # PPC/PPC64 needs -fno-tree-vectorize since -O3 would
 # otherwise generate wrong code producing segfaults.
 %ifarch %{power64} ppc
@@ -1689,6 +1693,17 @@ end
 
 
 %changelog
+* Tue Mar 03 2015 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.40-21.b25
+- Added compiler no-warn-
+
+* Fri Feb 20 2015 Omair Majid <omajid@redhat.com> - 1:1.8.0.40-21.b25
+- Fix zero interpreter build.
+
+* Thu Feb 12 2015 Omair Majid <omajid@redhat.com> - 1:1.8.0.40-21.b25
+- Fix building with gcc 5 by ignoring return-local-addr warning
+- Include additional debugging info for java class files and test that they are
+  present
+
 * Thu Feb 12 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.40-20.b25
 - bumped to b25
 - removed upstreamed patch11 hotspot-build-j-directive.patch
