@@ -113,11 +113,11 @@
 
 # Standard JPackage naming and versioning defines.
 %global origin          openjdk
-%global updatever       40
-%global buildver        b25
-%global aarch64_updatever 40
-%global aarch64_buildver b25
-%global aarch64_changesetid aarch64-jdk8u40-b25
+%global updatever       45
+%global buildver        b13
+%global aarch64_updatever 45
+%global aarch64_buildver b13
+%global aarch64_changesetid aarch64-jdk8u45-b13
 # priority must be 7 digits in total
 %global priority        18000%{updatever}
 %global javaver         1.8.0
@@ -635,7 +635,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 25.%{buildver}%{?dist}
+Release: 31.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -645,6 +645,7 @@ Release: 25.%{buildver}%{?dist}
 # satisfied by the 1:1.5.0 packages.  Thus we need to set the epoch in
 # JDK package >= 1.6.0 to 1, and packages referring to JDK virtual
 # provides >= 1.6.0 must specify the epoch, "java >= 1:1.6.0".
+
 Epoch:   1
 Summary: OpenJDK Runtime Environment
 Group:   Development/Languages
@@ -655,7 +656,7 @@ URL:      http://openjdk.java.net/
 # Source from upstrem OpenJDK8 project. To regenerate, use
 # ./generate_source_tarball.sh jdk8u jdk8u jdk8u%%{updatever}-%%{buildver}
 # ./generate_source_tarball.sh aarch64-port jdk8 %%{aarch64_hg_tag}
-Source0:  jdk8u40-jdk8u%{updatever}-%{buildver}.tar.xz
+Source0:  jdk8u45-jdk8u%{updatever}-%{buildver}.tar.xz
 Source1:  jdk8-jdk8u%{aarch64_updatever}-%{aarch64_buildver}-%{aarch64_changesetid}.tar.xz
 
 # Custom README for -src subpackage
@@ -675,7 +676,7 @@ Source10: policytool.desktop.in
 Source11: nss.cfg
 
 # Removed libraries that we link instead
-Source12: remove-intree-libraries.sh
+Source12: %{name}-remove-intree-libraries.sh
 
 # Ensure we aren't using the limited crypto policy
 Source13: TestCryptoLevel.java
@@ -694,7 +695,7 @@ Patch1:   %{name}-accessible-toolkit.patch
 # Restrict access to java-atk-wrapper classes
 Patch3: java-atk-wrapper-security.patch
 # RHBZ 808293
-Patch4: PStack-808293.patch
+Patch4: %{name}-PStack-808293.patch
 # Allow multiple initialization of PKCS11 libraries
 Patch5: multiple-pkcs11-library-init.patch
 # Disable doclint for compatibility
@@ -721,13 +722,22 @@ Patch204: zero-interpreter-fix.patch
 
 Patch300: jstack-pr1845.patch
 
+# Fixed in upstream 9. See upstream bug:
+# https://bugs.openjdk.java.net/browse/JDK-8064815
 Patch400: ppc_stack_overflow_fix.patch 
+# Fixed in upstream 9. See upstream bug:
+# https://bugs.openjdk.java.net/browse/JDK-8067330
 Patch401: fix_ZERO_ARCHDEF_ppc.patch
+# Fixed in upstream 9. See upstream bug:
+# https://bugs.openjdk.java.net/browse/JDK-8067331
 Patch402: atomic_linux_zero.inline.hpp.patch
+# Fixes StackOverflowError on ARM32 bit Zero. See RHBZ#1206656
+Patch403: rhbz1206656_fix_current_stack_pointer.patch
 
-#both upstreamed, will fly away in u60
+#both upstreamed, will fly away in u60 (bug IDs are Red Hat bug IDs)
 Patch501: 1182011_JavaPrintApiDoesNotPrintUmlautCharsWithPostscriptOutputCorrectly.patch
 Patch502: 1182694_javaApplicationMenuMisbehave.patch
+Patch503: d318d83c4e74.patch
 
 
 Patch9999: enableArm64.patch
@@ -983,9 +993,8 @@ cp %{SOURCE101} jdk8/common/autoconf/build-aux/
 # Remove libraries that are linked
 sh %{SOURCE12}
 
-%ifarch %{aarch64}
+# Add AArch64 support to configure & JDK build
 %patch9999
-%endif
 
 %patch201
 %patch202
@@ -1014,6 +1023,7 @@ sh %{SOURCE12}
 %patch400
 %patch401
 %patch402
+%patch403
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1024,6 +1034,7 @@ tar xzf %{SOURCE8}
 
 %patch501
 %patch502
+%patch503
 
 %if %{include_debug_build}
 cp -r tapset tapset%{debug_suffix}
@@ -1045,7 +1056,7 @@ for suffix in %{build_loop} ; do
   done
 done
 # systemtap tapsets ends
-%endif 
+%endif
 
 # Prepare desktop files
 for suffix in %{build_loop} ; do
@@ -1126,6 +1137,9 @@ bash ../../configure \
     --with-extra-cxxflags="$EXTRA_CPP_FLAGS" \
     --with-extra-cflags="$EXTRA_CFLAGS" \
     --with-num-cores="$NUM_PROC"
+
+cat spec.gmk
+cat hotspot-spec.gmk
 
 # The combination of FULL_DEBUG_SYMBOLS=0 and ALT_OBJCOPY=/does_not_exist
 # disables FDS for all build configs and reverts to pre-FDS make logic.
@@ -1703,8 +1717,25 @@ end
 %{files_accessibility %{debug_suffix_unquoted}}
 %endif
 
-
 %changelog
+* Fri Apr 10 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-31.b13
+- repacked sources
+
+* Tue Apr 07 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-30.b13
+- updated to security u45
+- added patch d318d83c4e74.patch
+- added  rhbz1206656_fix_current_stack_pointer.patch
+- renamed PStack-808293.patch -> java-1.8.0-openjdk-PStack-808293.patch
+- renamed remove-intree-libraries.sh -> java-1.8.0-openjdk-remove-intree-libraries.sh
+- renamed to preven conflix with jdk7
+
+* Thu Apr 02 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.40-27.b25
+- bumped release. Needed rebuild by itself on arm
+
+* Tue Mar 31 2015 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.40-26.b25
+- Make Zero build-able on ARM32.
+  Resolves: RHBZ#1206656
+
 * Fri Mar 27 2015 Dan Horák <dan[at]danny.cz> - 1:1.8.0.40-25.b25
 - refresh s390 patches
 
