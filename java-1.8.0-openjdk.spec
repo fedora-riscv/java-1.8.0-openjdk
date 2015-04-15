@@ -212,6 +212,7 @@ Patch102: %{name}-size_t.patch
 Patch201: system-libjpeg.patch
 Patch202: system-libpng.patch
 Patch203: system-lcms.patch
+Patch204: zero-interpreter-fix.patch
 
 Patch300: jstack-pr1845.patch
 
@@ -437,6 +438,9 @@ sh %{SOURCE12}
 %patch201
 %patch202
 %patch203
+%ifnarch %{aarch64}
+%patch204
+%endif
 
 %patch1
 %patch3
@@ -1149,6 +1153,7 @@ exit 0
 %changelog
 * Fri Apr 10 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-31.b13
 - repacked sources
+- added Patch204: zero-interpreter-fix.patch
 
 * Tue Apr 07 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-30.b13
 - updated to security u45
