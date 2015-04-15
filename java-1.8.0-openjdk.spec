@@ -81,11 +81,11 @@
 
 # Standard JPackage naming and versioning defines.
 %global origin          openjdk
-%global updatever       31
+%global updatever       45
 %global buildver        b13
-%global aarch64_updatever 40
-%global aarch64_buildver b12
-%global aarch64_changesetid aarch64-hs3135441ed942
+%global aarch64_updatever 45
+%global aarch64_buildver b13
+%global aarch64_changesetid aarch64-jdk8u45-b13
 # priority must be 7 digits in total
 %global priority        0000000
 %global javaver         1.8.0
@@ -128,7 +128,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 4.%{buildver}%{?dist}
+Release: 31.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -138,6 +138,7 @@ Release: 4.%{buildver}%{?dist}
 # satisfied by the 1:1.5.0 packages.  Thus we need to set the epoch in
 # JDK package >= 1.6.0 to 1, and packages referring to JDK virtual
 # provides >= 1.6.0 must specify the epoch, "java >= 1:1.6.0".
+
 Epoch:   1
 Summary: OpenJDK Runtime Environment
 Group:   Development/Languages
@@ -148,7 +149,7 @@ URL:      http://openjdk.java.net/
 # Source from upstrem OpenJDK8 project. To regenerate, use
 # ./generate_source_tarball.sh jdk8u jdk8u jdk8u%%{updatever}-%%{buildver}
 # ./generate_source_tarball.sh aarch64-port jdk8 %%{aarch64_hg_tag}
-Source0:  jdk8u-jdk8u%{updatever}-%{buildver}.tar.xz
+Source0:  jdk8u45-jdk8u%{updatever}-%{buildver}.tar.xz
 Source1:  jdk8-jdk8u%{aarch64_updatever}-%{aarch64_buildver}-%{aarch64_changesetid}.tar.xz
 
 # Custom README for -src subpackage
@@ -195,7 +196,6 @@ Patch6: disable-doclint-by-default.patch
 # Include all sources in src.zip
 Patch7: include-all-srcs.patch
 # Problem discovered with make 4.0
-Patch11: hotspot-build-j-directive.patch
 Patch12: removeSunEcProvider-RH1154143.patch
 
 #
@@ -444,7 +444,6 @@ sh %{SOURCE12}
 %patch5
 %patch6
 %patch7
-%patch11
 %patch12
 
 %patch99
@@ -1148,6 +1147,16 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Fri Apr 10 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-31.b13
+- repacked sources
+
+* Tue Apr 07 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-30.b13
+- updated to security u45
+- deleted hotspot-build-j-directive.patch
+- adapted generate_source_tarball.sh, removeSunEcProvider-RH1154143.patch,
+  repackReproduciblePolycies.sh
+
+
 * Thu Feb 12 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.25-4.b12
 - policies repacked to stop spamming yum update
 - added and used source20 repackReproduciblePolycies.sh
