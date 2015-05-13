@@ -548,7 +548,7 @@ Requires: ca-certificates
 # Require jpackage-utils for ownership of /usr/lib/jvm/
 Requires: jpackage-utils
 # Require zoneinfo data provided by tzdata-java subpackage.
-Requires: tzdata-java >= 2014f-1
+Requires: tzdata-java >= 2015d
 # Post requires alternatives to install tool alternatives.
 Requires(post):   %{_sbindir}/alternatives
 # Postun requires alternatives to uninstall tool alternatives.
@@ -641,7 +641,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 35.%{buildver}%{?dist}
+Release: 38.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -728,13 +728,13 @@ Patch204: zero-interpreter-fix.patch
 
 Patch300: jstack-pr1845.patch
 
-# Fixed in upstream 9. See upstream bug:
+# Fixed upstream. Can be removed with u60. See upstream bug:
 # https://bugs.openjdk.java.net/browse/JDK-8064815
 Patch400: ppc_stack_overflow_fix.patch 
-# Fixed in upstream 9. See upstream bug:
+# Fixed upstream. Can be removed with u60. See upstream bug:
 # https://bugs.openjdk.java.net/browse/JDK-8067330
 Patch401: fix_ZERO_ARCHDEF_ppc.patch
-# Fixed in upstream 9. See upstream bug:
+# Fixed upstream. Can be removed with u60. See upstream bug:
 # https://bugs.openjdk.java.net/browse/JDK-8067331
 Patch402: atomic_linux_zero.inline.hpp.patch
 # Fixes StackOverflowError on ARM32 bit Zero. See RHBZ#1206656
@@ -779,7 +779,7 @@ BuildRequires: java-1.8.0-openjdk-devel
 %ifnarch %{jit_arches}
 BuildRequires: libffi-devel
 %endif
-BuildRequires: tzdata-java >= 2014f-1
+BuildRequires: tzdata-java >= 2015d
 
 # cacerts build requirement.
 BuildRequires: openssl
@@ -1026,7 +1026,6 @@ sh %{SOURCE12}
 %endif
 
 # Zero PPC fixes.
-#  TODO: propose them upstream
 %patch400
 %patch401
 %patch402
@@ -1459,7 +1458,6 @@ local caredFiles = {"jre/lib/calendars.properties",
               "jre/lib/net.properties",
               "jre/lib/psfontj2d.properties",
               "jre/lib/sound.properties",
-              "jre/lib/tz.properties",
               "jre/lib/deployment.properties",
               "jre/lib/deployment.config",
               "jre/lib/security/US_export_policy.jar",
@@ -1724,6 +1722,7 @@ end
 %changelog
 * Wed May 13 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-35.b14
 - updated to 8u45-b14 with hope to fix rhbz#1123870
+- sync with f22
 
 * Wed Apr 29 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-35.b13
 - Omit jsa files from power64 file list as well, as they are never generated
