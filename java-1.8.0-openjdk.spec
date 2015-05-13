@@ -117,7 +117,7 @@
 # Standard JPackage naming and versioning defines.
 %global origin          openjdk
 %global updatever       45
-%global buildver        b13
+%global buildver        b14
 %global aarch64_updatever 45
 %global aarch64_buildver b13
 %global aarch64_changesetid aarch64-jdk8u45-b13
@@ -1722,6 +1722,9 @@ end
 %endif
 
 %changelog
+* Wed May 13 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-35.b14
+- updated to 8u45-b14 with hope to fix rhbz#1123870
+
 * Wed Apr 29 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-35.b13
 - Omit jsa files from power64 file list as well, as they are never generated
 - moved to boot build by openjdk8
