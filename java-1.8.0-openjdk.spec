@@ -559,6 +559,7 @@ bash ../../configure \
 
 make \
     DEBUG_BINARIES=true \
+    JAVAC_FLAGS=-g \
     STRIP_POLICY=no_strip \
     POST_STRIP_CMD="" \
     LOG=trace \
@@ -610,7 +611,17 @@ if [ -f "$ZERO_JVM" ] ; then
 fi
 
 # Check src.zip has all sources. See RHBZ#1130490
-jar -tf $JAVA_HOME/src.zip | grep Unsafe
+jar -tf $JAVA_HOME/src.zip | grep 'sun.misc.Unsafe'
+
+# Check class files include useful debugging information
+$JAVA_HOME/bin/javap -l java.lang.Object | grep "Compiled from"
+$JAVA_HOME/bin/javap -l java.lang.Object | grep LineNumberTable
+$JAVA_HOME/bin/javap -l java.lang.Object | grep LocalVariableTable
+
+# Check generated class files include useful debugging information
+$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep "Compiled from"
+$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LineNumberTable
+$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LocalVariableTable
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -1153,6 +1164,11 @@ exit 0
 %changelog
 * Wed May 13 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-35.b14
 - updated to 8u45-b14 with hope to fix rhbz#1123870
+
+* Thu Apr 16 2015 Omair Majid <omajid@redhat.com> - 1:1.8.0.45-32.b13
+- Build all java code with -g
+- Test at build-time to ensure debugging information is included
+- Resolves: rhbz#1150932
 
 * Fri Apr 10 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-31.b13
 - repacked sources
