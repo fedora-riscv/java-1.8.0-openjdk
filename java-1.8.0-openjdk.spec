@@ -641,7 +641,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 38.%{buildver}%{?dist}
+Release: 39.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -1031,16 +1031,16 @@ sh %{SOURCE12}
 %patch402
 %patch403
 
+%patch501
+%patch502
+%patch503
+
 # Extract systemtap tapsets
-%if %{with_systemtap}
+if %{with_systemtap}
 
 tar xzf %{SOURCE8}
 
 %patch300
-
-%patch501
-%patch502
-%patch503
 
 %if %{include_debug_build}
 cp -r tapset tapset%{debug_suffix}
@@ -1720,7 +1720,14 @@ end
 %endif
 
 %changelog
-* Wed May 13 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-35.b14
+* Mon May 25 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-39.b14
+- patches 501-503 moved out of with_systemtap block
+ patch501 1182011_JavaPrintApiDoesNotPrintUmlautCharsWithPostscriptOutputCorrectly.patch
+ patch502 1182694_javaApplicationMenuMisbehave.patch
+ patch503 d318d83c4e74.patch
+
+
+* Wed May 13 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-38.b14
 - updated to 8u45-b14 with hope to fix rhbz#1123870
 - sync with f22
 
