@@ -1036,7 +1036,7 @@ sh %{SOURCE12}
 %patch503
 
 # Extract systemtap tapsets
-if %{with_systemtap}
+%if %{with_systemtap}
 
 tar xzf %{SOURCE8}
 
