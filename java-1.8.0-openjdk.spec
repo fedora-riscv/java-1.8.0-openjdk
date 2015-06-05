@@ -549,6 +549,8 @@ Requires: ca-certificates
 Requires: jpackage-utils
 # Require zoneinfo data provided by tzdata-java subpackage.
 Requires: tzdata-java >= 2015d
+# libsctp.so.1 is being `dlopen`ed on demand
+Requires: lksctp-tools
 # Post requires alternatives to install tool alternatives.
 Requires(post):   %{_sbindir}/alternatives
 # Postun requires alternatives to uninstall tool alternatives.
@@ -1720,6 +1722,9 @@ end
 %endif
 
 %changelog
+* Fri Jun 05 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-40.b14
+- added requires lksctp-tools for headless subpackage to make sun.nio.ch.sctp work
+
 * Mon May 25 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-39.b14
 - patches 501-503 moved out of with_systemtap block
  patch501 1182011_JavaPrintApiDoesNotPrintUmlautCharsWithPostscriptOutputCorrectly.patch
