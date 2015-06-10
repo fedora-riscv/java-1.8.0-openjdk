@@ -750,6 +750,7 @@ Patch503: d318d83c4e74.patch
 Patch504: 1210739_dns_naming_ipv6_addresses.patch
 # Patch for upstream JDK-8078666 (RHBZ#1208369)
 Patch505: 1208369_memory_leak_gcc5.patch
+Patch506: rhbz1213280-b51c6914f297.patch
 
 
 Patch9999: enableArm64.patch
@@ -1042,6 +1043,7 @@ sh %{SOURCE12}
 %patch503
 %patch504
 %patch505
+%patch506
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1730,6 +1732,7 @@ end
 %changelog
 * Fri Jun 05 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-40.b14
 - added requires lksctp-tools for headless subpackage to make sun.nio.ch.sctp work
+- added patch506 rhbz1213280-b51c6914f297.patch
 
 * Mon May 25 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-39.b14
 - patches 501-505 moved out of with_systemtap block
