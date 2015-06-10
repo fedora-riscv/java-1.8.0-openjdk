@@ -128,7 +128,7 @@
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 38.%{buildver}%{?dist}
+Release: 40.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -225,6 +225,8 @@ Patch401: fix_ZERO_ARCHDEF_ppc.patch
 # Fixed in upstream 9. See upstream bug:
 # https://bugs.openjdk.java.net/browse/JDK-8067331
 Patch402: atomic_linux_zero.inline.hpp.patch
+Patch506: rhbz1213280-b51c6914f297.patch
+
 
 Patch9999: enableArm64.patch
 
@@ -299,6 +301,8 @@ Requires: ca-certificates
 Requires: jpackage-utils
 # Require zoneinfo data provided by tzdata-java subpackage.
 Requires: tzdata-java
+# libsctp.so.1 is being `dlopen`ed on demand
+Requires: lksctp-tools
 # Post requires alternatives to install tool alternatives.
 Requires(post):   %{_sbindir}/alternatives
 # Postun requires alternatives to uninstall tool alternatives.
@@ -463,6 +467,8 @@ sh %{SOURCE12}
 %patch400
 %patch401
 %patch402
+
+%patch506
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1162,6 +1168,10 @@ exit 0
 %{_jvmdir}/%{jredir}/lib/accessibility.properties
 
 %changelog
+* Fri Jun 05 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-40.b14
+- added requires lksctp-tools for headless subpackage to make sun.nio.ch.sctp work
+- added patch506 rhbz1213280-b51c6914f297.patch
+
 * Wed May 13 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-35.b14
 - updated to 8u45-b14 with hope to fix rhbz#1123870
 
