@@ -643,7 +643,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 39.%{buildver}%{?dist}
+Release: 40.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -746,6 +746,7 @@ Patch403: rhbz1206656_fix_current_stack_pointer.patch
 Patch501: 1182011_JavaPrintApiDoesNotPrintUmlautCharsWithPostscriptOutputCorrectly.patch
 Patch502: 1182694_javaApplicationMenuMisbehave.patch
 Patch503: d318d83c4e74.patch
+Patch506: rhbz1213280-b51c6914f297.patch
 
 
 Patch9999: enableArm64.patch
@@ -1036,10 +1037,10 @@ sh %{SOURCE12}
 %patch501
 %patch502
 %patch503
+%patch506
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
-
 tar xzf %{SOURCE8}
 
 %patch300
@@ -1724,6 +1725,7 @@ end
 %changelog
 * Fri Jun 05 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-40.b14
 - added requires lksctp-tools for headless subpackage to make sun.nio.ch.sctp work
+- added patch506 rhbz1213280-b51c6914f297.patch
 
 * Mon May 25 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-39.b14
 - patches 501-503 moved out of with_systemtap block

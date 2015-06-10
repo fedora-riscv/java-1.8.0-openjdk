@@ -1,0 +1,20 @@
+# HG changeset patch
+# User dl
+# Date 1429882781 -7200
+# Node ID b51c6914f297ec5152364771c2c7b430753b9649
+# Parent  dc24d209f80a2ba8e0e6fe7dc42aced218f8deae
+8078490: Missed submissions in ForkJoinPool
+Reviewed-by: psandoz, shade, martin, chegar
+
+diff -r dc24d209f80a -r b51c6914f297 src/share/classes/java/util/concurrent/ForkJoinPool.java
+--- jdk8/jdk/src/share/classes/java/util/concurrent/ForkJoinPool.java	Thu May 07 18:34:49 2015 +0300
++++ jdk8/jdk/src/share/classes/java/util/concurrent/ForkJoinPool.java	Fri Apr 24 15:39:41 2015 +0200
+@@ -2406,7 +2406,7 @@
+                 int j = ((am & s) << ASHIFT) + ABASE;
+                 U.putOrderedObject(a, j, task);
+                 U.putOrderedInt(q, QTOP, s + 1);
+-                U.putOrderedInt(q, QLOCK, 0);
++                U.putIntVolatile(q, QLOCK, 0);
+                 if (n <= 1)
+                     signalWork(ws, q);
+                 return;
