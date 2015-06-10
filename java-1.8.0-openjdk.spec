@@ -718,6 +718,9 @@ Patch13: libjpeg-turbo-1.4-compat.patch
 # OpenJDK specific patches
 #
 
+# http://hg.openjdk.java.net/jdk9/hs/hotspot/rev/471b684ff43e
+# allow build on Linux 4.x kernels
+Patch99: java-1.8.0-openjdk-linux-4.x.patch
 # JVM heap size changes for s390 (thanks to aph)
 Patch100: %{name}-s390-java-opts.patch
 # Type fixing for s390
@@ -1006,6 +1009,8 @@ cp %{SOURCE101} jdk8/common/autoconf/build-aux/
 
 # Remove libraries that are linked
 sh %{SOURCE12}
+
+%patch99
 
 # Add AArch64 support to configure & JDK build
 %patch9999
@@ -1733,6 +1738,7 @@ end
 * Fri Jun 05 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-40.b14
 - added requires lksctp-tools for headless subpackage to make sun.nio.ch.sctp work
 - added patch506 rhbz1213280-b51c6914f297.patch
+- allow build on Linux 4.x kernel (sync from master)
 
 * Mon May 25 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-39.b14
 - patches 501-505 moved out of with_systemtap block
