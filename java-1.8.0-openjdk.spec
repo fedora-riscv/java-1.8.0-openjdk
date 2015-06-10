@@ -203,6 +203,9 @@ Patch12: removeSunEcProvider-RH1154143.patch
 #
 # Allow icedtea-web to build
 Patch99: applet-hole.patch
+# http://hg.openjdk.java.net/jdk9/hs/hotspot/rev/471b684ff43e
+# allow build on Linux 4.x kernels
+Patch98: java-1.8.0-openjdk-linux-4.x.patch
 
 # JVM heap size changes for s390 (thanks to aph)
 Patch100: %{name}-s390-java-opts.patch
@@ -434,6 +437,8 @@ cp %{SOURCE101} jdk8/common/autoconf/build-aux/
 
 # Remove libraries that are linked
 sh %{SOURCE12}
+
+%patch98
 
 %ifarch %{aarch64}
 %patch9999
@@ -1171,6 +1176,7 @@ exit 0
 * Fri Jun 05 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-40.b14
 - added requires lksctp-tools for headless subpackage to make sun.nio.ch.sctp work
 - added patch506 rhbz1213280-b51c6914f297.patch
+- allow build on Linux 4.x kernel (sync from master)
 
 * Wed May 13 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-35.b14
 - updated to 8u45-b14 with hope to fix rhbz#1123870
