@@ -116,8 +116,8 @@
 
 # Standard JPackage naming and versioning defines.
 %global origin          openjdk
-%global updatever       45
-%global buildver        b14
+%global updatever       51
+%global buildver        b16
 %global aarch64_updatever 45
 %global aarch64_buildver b13
 %global aarch64_changesetid aarch64-jdk8u45-b13
@@ -643,7 +643,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 40.%{buildver}%{?dist}
+Release: 1.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -664,7 +664,7 @@ URL:      http://openjdk.java.net/
 # Source from upstrem OpenJDK8 project. To regenerate, use
 # ./generate_source_tarball.sh jdk8u jdk8u jdk8u%%{updatever}-%%{buildver}
 # ./generate_source_tarball.sh aarch64-port jdk8 %%{aarch64_hg_tag}
-Source0:  jdk8u45-jdk8u%{updatever}-%{buildver}.tar.xz
+Source0:  jdk8u-jdk8u%{updatever}-%{buildver}.tar.xz
 Source1:  jdk8-jdk8u%{aarch64_updatever}-%{aarch64_buildver}-%{aarch64_changesetid}.tar.xz
 
 # Custom README for -src subpackage
@@ -1735,6 +1735,9 @@ end
 %endif
 
 %changelog
+* Tue Jul 14 2015 Omair Majid <omajid@redhat.com> - 1:1.8.0.51-1.b16
+- Update to the 8u51-b16 security release
+
 * Fri Jun 05 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-40.b14
 - added requires lksctp-tools for headless subpackage to make sun.nio.ch.sctp work
 - added patch506 rhbz1213280-b51c6914f297.patch

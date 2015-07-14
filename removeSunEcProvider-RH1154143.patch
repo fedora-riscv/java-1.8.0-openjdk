@@ -21,9 +21,13 @@
  
  #
  # Sun Provider SecureRandom seed source.
-@@ -504,4 +504,4 @@
+@@ -504,7 +504,7 @@
  #
  # Example:
  #   jdk.tls.disabledAlgorithms=MD5, SSLv3, DSA, RSA keySize < 2048
--jdk.tls.disabledAlgorithms=SSLv3
-+jdk.tls.disabledAlgorithms=SSLv3,EC,ECDHE,ECDH
+-jdk.tls.disabledAlgorithms=SSLv3, DH keySize < 768
++jdk.tls.disabledAlgorithms=SSLv3, DH keySize < 768, EC, ECDHE, ECDH
+ 
+ # Legacy algorithms for Secure Socket Layer/Transport Layer Security (SSL/TLS)
+ # processing in JSSE implementation.
+ 
