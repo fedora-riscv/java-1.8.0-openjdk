@@ -770,7 +770,7 @@ Patch503: rh1163501.patch
 Patch504: rh1210739.patch
 # Patch for upstream JDK-8078666 (RHBZ#1208369)
 Patch505: 1208369_memory_leak_gcc5.patch
-Patch506: rhbz1213280-b51c6914f297.patch
+Patch506: rh1213280.patch
 
 
 Patch9999: enableArm64.patch
