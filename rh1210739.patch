@@ -1,16 +1,16 @@
-
 # HG changeset patch
 # User robm
 # Date 1430151427 -3600
-# Node ID b02550d62bdbaf61a258628b47acc3fc7982d7e5
-# Parent  70aaa6da3101e6c2feeabce3b36d50624ed918ad
-6991580: IPv6 Nameservers in resolv.conf throws NumberFormatException
+#      Mon Apr 27 17:17:07 2015 +0100
+# Node ID 25793dbc656988d6e20c9b2653790ce25b8bee03
+# Parent  ea26a8f4db7e20b97340b7e76e3126b3a3493307
+6991580, PR2403: IPv6 Nameservers in resolv.conf throws NumberFormatException
 Reviewed-by: michaelm, andrew, alanb, rriggs
 Contributed-by: sgehwolf@redhat.com
 
-diff -r 70aaa6da3101 -r b02550d62bdb src/solaris/classes/sun/net/dns/ResolverConfigurationImpl.java
---- jdk8/jdk/src/solaris/classes/sun/net/dns/ResolverConfigurationImpl.java	Sun Apr 19 10:31:06 2015 +0300
-+++ jdk8/jdk/src/solaris/classes/sun/net/dns/ResolverConfigurationImpl.java	Mon Apr 27 17:17:07 2015 +0100
+diff -r ea26a8f4db7e -r 25793dbc6569 src/solaris/classes/sun/net/dns/ResolverConfigurationImpl.java
+--- openjdk/jdk/src/solaris/classes/sun/net/dns/ResolverConfigurationImpl.java	Thu Jun 04 20:13:40 2015 +0100
++++ openjdk/jdk/src/solaris/classes/sun/net/dns/ResolverConfigurationImpl.java	Mon Apr 27 17:17:07 2015 +0100
 @@ -85,6 +85,15 @@
                      if (val.charAt(0) == '#' || val.charAt(0) == ';') {
                          break;
@@ -27,9 +27,9 @@ diff -r 70aaa6da3101 -r b02550d62bdb src/solaris/classes/sun/net/dns/ResolverCon
                      ll.add(val);
                      if (--maxvalues == 0) {
                          break;
-diff -r 70aaa6da3101 -r b02550d62bdb test/com/sun/jndi/dns/IPv6NameserverPlatformParsingTest.java
+diff -r ea26a8f4db7e -r 25793dbc6569 test/com/sun/jndi/dns/IPv6NameserverPlatformParsingTest.java
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ jdk8/jdk/test/com/sun/jndi/dns/IPv6NameserverPlatformParsingTest.java	Mon Apr 27 17:17:07 2015 +0100
++++ openjdk/jdk/test/com/sun/jndi/dns/IPv6NameserverPlatformParsingTest.java	Mon Apr 27 17:17:07 2015 +0100
 @@ -0,0 +1,104 @@
 +/*
 + * Copyright (c) 2015, Red Hat, Inc.
@@ -135,4 +135,3 @@ diff -r 70aaa6da3101 -r b02550d62bdb test/com/sun/jndi/dns/IPv6NameserverPlatfor
 +    }
 +
 +}
-
