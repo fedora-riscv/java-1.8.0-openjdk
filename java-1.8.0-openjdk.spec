@@ -767,7 +767,7 @@ Patch501: 1182011_JavaPrintApiDoesNotPrintUmlautCharsWithPostscriptOutputCorrect
 Patch502: 1182694_javaApplicationMenuMisbehave.patch
 Patch503: rh1163501.patch
 # Patch for upstream JDK-6991580 (RHBZ#1210739). Can be removed with u60
-Patch504: 1210739_dns_naming_ipv6_addresses.patch
+Patch504: rh1210739.patch
 # Patch for upstream JDK-8078666 (RHBZ#1208369)
 Patch505: 1208369_memory_leak_gcc5.patch
 Patch506: rhbz1213280-b51c6914f297.patch
