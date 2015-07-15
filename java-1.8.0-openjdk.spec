@@ -118,9 +118,9 @@
 %global origin          openjdk
 %global updatever       51
 %global buildver        b16
-%global aarch64_updatever 45
-%global aarch64_buildver b13
-%global aarch64_changesetid aarch64-jdk8u45-b13
+%global aarch64_updatever 51
+%global aarch64_buildver b16
+%global aarch64_changesetid aarch64-jdk8u51-b16
 # priority must be 7 digits in total
 %global priority        18000%{updatever}
 %global javaver         1.8.0
@@ -130,7 +130,7 @@
 #images stub
 %global j2sdkimage       j2sdk-image
 # output dir stub
-%global buildoutputdir() %{expand:jdk8/build/jdk8.build%1}
+%global buildoutputdir() %{expand:openjdk/build/jdk8.build%1}
 #we can copy the javadoc to not arched dir, or made it not noarch
 %global uniquejavadocdir()    %{expand:%{fullversion}%1}
 #main id and dir of this jdk
@@ -171,6 +171,23 @@ exit 0
 %global post_headless() %{expand:
 # FIXME: identical binaries are copied, not linked. This needs to be
 # fixed upstream.
+# The pretrans lua scriptlet prevents an unmodified java.security
+# from being replaced via an update. It gets created as
+# java.security.rpmnew instead. This invalidates the patch of
+# JDK-8061210 of the January 2015 CPU or JDK-8043201 of the
+# July 2015 CPU. We fix this via a post scriptlet which runs on updates.
+if [ "$1" -gt 1 ]; then
+  javasecurity="%{_jvmdir}/%{uniquesuffix}/jre/lib/security/java.security"
+  sum=$(md5sum "${javasecurity}" | cut -d' ' -f1)
+  # This is the md5sum of an unmodified java.security file
+  if [ "${sum}" = '1690ac33955594f71dc952c9e83fd396' -o \
+       "${sum}" = 'd17958676bdb9f9d941c8a59655311fb' ]; then
+    if [ -f "${javasecurity}.rpmnew" ]; then
+      mv -f "${javasecurity}.rpmnew" "${javasecurity}"
+    fi
+  fi
+fi
+
 %ifarch %{jit_arches}
 # MetaspaceShared::generate_vtable_methods not implemented for PPC JIT
 %ifnarch %{power64}
@@ -548,7 +565,7 @@ Requires: ca-certificates
 # Require jpackage-utils for ownership of /usr/lib/jvm/
 Requires: jpackage-utils
 # Require zoneinfo data provided by tzdata-java subpackage.
-Requires: tzdata-java >= 2015d
+Requires: tzdata-java >= 2015d-2
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools
 # Post requires alternatives to install tool alternatives.
@@ -643,7 +660,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 1.%{buildver}%{?dist}
+Release: 2.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -665,7 +682,7 @@ URL:      http://openjdk.java.net/
 # ./generate_source_tarball.sh jdk8u jdk8u jdk8u%%{updatever}-%%{buildver}
 # ./generate_source_tarball.sh aarch64-port jdk8 %%{aarch64_hg_tag}
 Source0:  jdk8u-jdk8u%{updatever}-%{buildver}.tar.xz
-Source1:  jdk8-jdk8u%{aarch64_updatever}-%{aarch64_buildver}-%{aarch64_changesetid}.tar.xz
+Source1:  jdk8u-%{aarch64_changesetid}.tar.xz
 
 # Custom README for -src subpackage
 Source2:  README.src
@@ -733,13 +750,13 @@ Patch204: zero-interpreter-fix.patch
 
 Patch300: jstack-pr1845.patch
 
-# Fixed upstream. Can be removed with u60. See upstream bug:
+# Fixed in upstream 9. See upstream bug:
 # https://bugs.openjdk.java.net/browse/JDK-8064815
 Patch400: ppc_stack_overflow_fix.patch 
-# Fixed upstream. Can be removed with u60. See upstream bug:
+# Fixed in upstream 9. See upstream bug:
 # https://bugs.openjdk.java.net/browse/JDK-8067330
 Patch401: fix_ZERO_ARCHDEF_ppc.patch
-# Fixed upstream. Can be removed with u60. See upstream bug:
+# Fixed in upstream 9. See upstream bug:
 # https://bugs.openjdk.java.net/browse/JDK-8067331
 Patch402: atomic_linux_zero.inline.hpp.patch
 # Fixes StackOverflowError on ARM32 bit Zero. See RHBZ#1206656
@@ -748,9 +765,31 @@ Patch403: rhbz1206656_fix_current_stack_pointer.patch
 #both upstreamed, will fly away in u60 (bug IDs are Red Hat bug IDs)
 Patch501: 1182011_JavaPrintApiDoesNotPrintUmlautCharsWithPostscriptOutputCorrectly.patch
 Patch502: 1182694_javaApplicationMenuMisbehave.patch
-Patch503: d318d83c4e74.patch
-Patch506: rhbz1213280-b51c6914f297.patch
 
+# S8087156, PR2444: SetupNativeCompilation ignores CFLAGS_release for cpp files (in 8u60)
+Patch503: pr2444.patch
+# PR2095, RH1163501: 2048-bit DH upper bound too small for Fedora infrastructure (sync with IcedTea 2.x)
+Patch504: rh1163501.patch
+# 6584008, PR2192, RH1173326: jvmtiStringPrimitiveCallback should not be invoked when string value is null (in 8u60)
+Patch505: rh1173326.patch
+# S8074761, PR2471: Empty optional parameters of LDAP query are not interpreted as empty (in 8u60)
+Patch506: rh1194226.patch
+# S8078482, PR2398, RH1201393: ppc: pass thread to throw_AbstractMethodError (in 8u60)
+Patch507: rh1201393.patch
+# S6991580, PR2403, RH1210739: IPv6 Nameservers in resolv.conf throws NumberFormatException (in 8u60)
+Patch508: rh1210739.patch
+# S8078654, PR2332, RH1212268: CloseTTFontFileFunc callback should be removed (in 8u60)
+Patch509: rh1212268.patch
+# S8078490, PR2431, RH1213280: Missed submissions in ForkJoinPool
+Patch510: rh1213280.patch
+# S4890063, PR2304, RH1214835: HPROF: default text truncated when using doe=n option (upstreaming post-CPU 2015/07)
+Patch511: rh1214835.patch
+
+# RH1191652; fix name of ppc64le architecture
+Patch600: %{name}-rh1191652-hotspot.patch
+Patch601: %{name}-rh1191652-root.patch
+Patch602: %{name}-rh1191652-jdk.patch
+Patch603: %{name}-rh1191652-hotspot-aarch64.patch
 
 Patch9999: enableArm64.patch
 
@@ -985,9 +1024,11 @@ if [ $prioritylength -ne 7 ] ; then
  echo "priority must be 7 digits in total, violated"
  exit 14
 fi
-ln -s jdk8 openjdk
+# For old patches
+ln -s openjdk jdk8
+# Swap HotSpot for AArch64 port
 %ifarch %{aarch64}
-pushd jdk8
+pushd openjdk
 rm -r hotspot
 tar xf %{SOURCE1}
 popd
@@ -998,8 +1039,8 @@ cp %{SOURCE2} .
 #
 # the configure macro will do this too, but it also passes a few flags not
 # supported by openjdk configure script
-cp %{SOURCE100} jdk8/common/autoconf/build-aux/
-cp %{SOURCE101} jdk8/common/autoconf/build-aux/
+cp %{SOURCE100} openjdk/common/autoconf/build-aux/
+cp %{SOURCE101} openjdk/common/autoconf/build-aux/
 
 # OpenJDK patches
 
@@ -1034,15 +1075,34 @@ sh %{SOURCE12}
 %endif
 
 # Zero PPC fixes.
+#  TODO: propose them upstream
 %patch400
 %patch401
 %patch402
 %patch403
 
+# HotSpot ppc64le patch is different depending
+# on whether we are using 2.5 or 2.6 HotSpot.
+%ifarch %{aarch64}
+%patch603
+%else
+%patch600
+%endif
+
+%patch601
+%patch602
+
 %patch501
 %patch502
 %patch503
+%patch504
+%patch505
 %patch506
+%patch507
+%patch508
+%patch509
+%patch510
+%patch511
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1111,7 +1171,7 @@ EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-strict-aliasing"
 %endif
 export EXTRA_CFLAGS
 
-(cd jdk8/common/autoconf
+(cd openjdk/common/autoconf
  bash ./autogen.sh
 )
 
@@ -1340,7 +1400,7 @@ cp -a %{buildoutputdir $suffix}/docs $RPM_BUILD_ROOT%{_javadocdir}/%{uniquejavad
 # Install icons and menu entries.
 for s in 16 24 32 48 ; do
   install -D -p -m 644 \
-    jdk8/jdk/src/solaris/classes/sun/awt/X11/java-icon${s}.png \
+    openjdk/jdk/src/solaris/classes/sun/awt/X11/java-icon${s}.png \
     $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/${s}x${s}/apps/java-%{javaver}.png
 done
 
@@ -1728,7 +1788,10 @@ end
 %endif
 
 %changelog
-* Tue Jul 07 2015 Omair Majid <omajid@redhat.com> - 1:1.8.0.51-1.b16
+* Wed Jul 15 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.51-2.b16
+- sync with rhel7
+
+* Tue Jul 14 2015 Omair Majid <omajid@redhat.com> - 1:1.8.0.51-1.b16
 - Update to the jdk8u51-b16 security release.
 
 * Fri Jun 05 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.45-40.b14

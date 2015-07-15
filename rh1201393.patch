@@ -1,0 +1,64 @@
+# HG changeset patch
+# User goetz
+# Date 1430299335 -7200
+#      Wed Apr 29 11:22:15 2015 +0200
+# Node ID c4bfba1711bad17f743648f775870864dbe1c2e3
+# Parent  1da8d6e3bcfeecabc3c13d37f44eced2d7fef521
+8078482, PR2398, RH1201393: ppc: pass thread to throw_AbstractMethodError
+Summary: Also improve check for Safepoints in signal handler.
+Reviewed-by: kvn, simonis
+
+diff -r 1da8d6e3bcfe -r c4bfba1711ba src/cpu/ppc/vm/interpreter_ppc.cpp
+--- openjdk/hotspot/src/cpu/ppc/vm/interpreter_ppc.cpp	Wed Apr 29 12:23:48 2015 -0700
++++ openjdk/hotspot/src/cpu/ppc/vm/interpreter_ppc.cpp	Wed Apr 29 11:22:15 2015 +0200
+@@ -1,6 +1,6 @@
+ /*
+- * Copyright (c) 1997, 2014, Oracle and/or its affiliates. All rights reserved.
+- * Copyright 2012, 2014 SAP AG. All rights reserved.
++ * Copyright (c) 1997, 2015, Oracle and/or its affiliates. All rights reserved.
++ * Copyright 2012, 2015 SAP AG. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -459,7 +459,8 @@
+ 
+   // This is not a leaf but we have a JavaFrameAnchor now and we will
+   // check (create) exceptions afterward so this is ok.
+-  __ call_VM_leaf(CAST_FROM_FN_PTR(address, InterpreterRuntime::throw_AbstractMethodError));
++  __ call_VM_leaf(CAST_FROM_FN_PTR(address, InterpreterRuntime::throw_AbstractMethodError),
++                  R16_thread);
+ 
+   // Pop the C frame and restore LR.
+   __ pop_frame();
+diff -r 1da8d6e3bcfe -r c4bfba1711ba src/os_cpu/linux_ppc/vm/os_linux_ppc.cpp
+--- openjdk/hotspot/src/os_cpu/linux_ppc/vm/os_linux_ppc.cpp	Wed Apr 29 12:23:48 2015 -0700
++++ openjdk/hotspot/src/os_cpu/linux_ppc/vm/os_linux_ppc.cpp	Wed Apr 29 11:22:15 2015 +0200
+@@ -1,6 +1,6 @@
+ /*
+- * Copyright (c) 1997, 2014, Oracle and/or its affiliates. All rights reserved.
+- * Copyright 2012, 2014 SAP AG. All rights reserved.
++ * Copyright (c) 1997, 2015, Oracle and/or its affiliates. All rights reserved.
++ * Copyright 2012, 2015 SAP AG. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -290,6 +290,7 @@
+         goto report_and_die;
+       }
+ 
++      CodeBlob *cb = NULL;
+       // Handle signal from NativeJump::patch_verified_entry().
+       if (( TrapBasedNotEntrantChecks && sig == SIGTRAP && nativeInstruction_at(pc)->is_sigtrap_zombie_not_entrant()) ||
+           (!TrapBasedNotEntrantChecks && sig == SIGILL  && nativeInstruction_at(pc)->is_sigill_zombie_not_entrant())) {
+@@ -305,7 +306,10 @@
+                // especially when we try to read from the safepoint polling page. So the check
+                //   (address)info->si_addr == os::get_standard_polling_page()
+                // doesn't work for us. We use:
+-               ((NativeInstruction*)pc)->is_safepoint_poll()) {
++               ((NativeInstruction*)pc)->is_safepoint_poll() &&
++               CodeCache::contains((void*) pc) &&
++               ((cb = CodeCache::find_blob(pc)) != NULL) &&
++               cb->is_nmethod()) {
+         if (TraceTraps) {
+           tty->print_cr("trap: safepoint_poll at " INTPTR_FORMAT " (SIGSEGV)", p2i(pc));
+         }

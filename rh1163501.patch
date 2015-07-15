@@ -1,13 +1,22 @@
---- jdk8/jdk/src/share/classes/com/sun/crypto/provider/DHKeyPairGenerator.java	Tue Mar 17 00:09:12 2015 +0300
-+++ jdk8/jdk/src/share/classes/com/sun/crypto/provider/DHKeyPairGenerator.java	Wed Apr 08 14:25:54 2015 +0100
-@@ -1,5 +1,6 @@ 
+# HG changeset patch
+# User andrew
+# Date 1433441408 -3600
+#      Thu Jun 04 19:10:08 2015 +0100
+# Node ID 7401b7ccfd7548fa09ea5febb28cb1d6a518ccfd
+# Parent  96fda20ef25170640321c3c3e021ead0c4c09acd
+PR2095, RH1163501: 2048-bit DH upper bound too small for Fedora infrastructure
+
+diff -r 96fda20ef251 -r 7401b7ccfd75 src/share/classes/com/sun/crypto/provider/DHKeyPairGenerator.java
+--- openjdk/jdk/src/share/classes/com/sun/crypto/provider/DHKeyPairGenerator.java	Thu Feb 12 09:45:08 2015 -0800
++++ openjdk/jdk/src/share/classes/com/sun/crypto/provider/DHKeyPairGenerator.java	Thu Jun 04 19:10:08 2015 +0100
+@@ -1,5 +1,6 @@
  /*
   * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
 + * Copyright (c) 2014 Red Hat Inc.
   * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
   *
   * This code is free software; you can redistribute it and/or modify it
-@@ -80,10 +81,10 @@ 
+@@ -80,10 +81,10 @@
       * @param random the source of randomness
       */
      public void initialize(int keysize, SecureRandom random) {
@@ -20,7 +29,7 @@
                                                  + "(inclusive)");
          }
          this.pSize = keysize;
-@@ -115,11 +116,11 @@ 
+@@ -115,11 +116,11 @@
  
          params = (DHParameterSpec)algParams;
          pSize = params.getP().bitLength();
@@ -34,16 +43,17 @@
          }
  
          // exponent size is optional, could be 0
---- jdk8/jdk/src/share/classes/com/sun/crypto/provider/DHParameterGenerator.java	Tue Mar 17 00:09:12 2015 +0300
-+++ jdk8/jdk/src/share/classes/com/sun/crypto/provider/DHParameterGenerator.java	Wed Apr 08 14:25:54 2015 +0100
-@@ -1,5 +1,6 @@ 
+diff -r 96fda20ef251 -r 7401b7ccfd75 src/share/classes/com/sun/crypto/provider/DHParameterGenerator.java
+--- openjdk/jdk/src/share/classes/com/sun/crypto/provider/DHParameterGenerator.java	Thu Feb 12 09:45:08 2015 -0800
++++ openjdk/jdk/src/share/classes/com/sun/crypto/provider/DHParameterGenerator.java	Thu Jun 04 19:10:08 2015 +0100
+@@ -1,5 +1,6 @@
  /*
   * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
 + * Copyright (c) 2014 Red Hat Inc.
   * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
   *
   * This code is free software; you can redistribute it and/or modify it
-@@ -60,11 +61,11 @@ 
+@@ -60,11 +61,11 @@
  
      private static void checkKeySize(int keysize)
          throws InvalidAlgorithmParameterException {
@@ -57,9 +67,10 @@
          }
      }
  
---- jdk8/jdk/src/share/classes/sun/security/pkcs11/P11KeyPairGenerator.java	Tue Mar 17 00:09:12 2015 +0300
-+++ jdk8/jdk/src/share/classes/sun/security/pkcs11/P11KeyPairGenerator.java	Wed Apr 08 14:25:54 2015 +0100
-@@ -278,11 +278,11 @@ 
+diff -r 96fda20ef251 -r 7401b7ccfd75 src/share/classes/sun/security/pkcs11/P11KeyPairGenerator.java
+--- openjdk/jdk/src/share/classes/sun/security/pkcs11/P11KeyPairGenerator.java	Thu Feb 12 09:45:08 2015 -0800
++++ openjdk/jdk/src/share/classes/sun/security/pkcs11/P11KeyPairGenerator.java	Thu Jun 04 19:10:08 2015 +0100
+@@ -278,11 +278,11 @@
                      // this restriction is in the spec for DSA
                      // since we currently use DSA parameters for DH as well,
                      // it also applies to DH if no parameters are specified
@@ -73,16 +84,17 @@
                      }
                  }
              }
---- jdk8/jdk/test/com/sun/crypto/provider/KeyAgreement/TestExponentSize.java	Tue Mar 17 00:09:12 2015 +0300
-+++ jdk8/jdk/test/com/sun/crypto/provider/KeyAgreement/TestExponentSize.java	Wed Apr 08 14:25:54 2015 +0100
-@@ -1,5 +1,6 @@ 
+diff -r 96fda20ef251 -r 7401b7ccfd75 test/com/sun/crypto/provider/KeyAgreement/TestExponentSize.java
+--- openjdk/jdk/test/com/sun/crypto/provider/KeyAgreement/TestExponentSize.java	Thu Feb 12 09:45:08 2015 -0800
++++ openjdk/jdk/test/com/sun/crypto/provider/KeyAgreement/TestExponentSize.java	Thu Jun 04 19:10:08 2015 +0100
+@@ -1,5 +1,6 @@
  /*
   * Copyright (c) 2005, 2012, Oracle and/or its affiliates. All rights reserved.
 + * Copyright (c) 2014 Red Hat Inc.
   * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
   *
   * This code is free software; you can redistribute it and/or modify it
-@@ -58,7 +59,7 @@ 
+@@ -58,7 +59,7 @@
       */
      private enum Sizes {
          two56(256), three84(384), five12(512), seven68(768), ten24(1024),
@@ -91,7 +103,7 @@
  
          private final int intSize;
          private final BigInteger bigIntValue;
-@@ -130,6 +131,19 @@ 
+@@ -130,6 +131,19 @@
          kp = kpg.generateKeyPair();
          checkKeyPair(kp, Sizes.twenty48, Sizes.five12);
  
@@ -111,4 +123,3 @@
          System.out.println("OK");
      }
  
-
