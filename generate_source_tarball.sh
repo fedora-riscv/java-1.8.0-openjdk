@@ -12,7 +12,7 @@
 #
 # This script creates a single source tarball out of the repository
 # based on the given tag and removes code not allowed in fedora. For
-# consistency, the source tarball will always contain 'jdk8' as the top
+# consistency, the source tarball will always contain 'openjdk' as the top
 # level folder.
 
 set -e
