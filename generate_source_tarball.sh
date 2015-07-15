@@ -44,8 +44,8 @@ wget "${REPO_ROOT}/archive/${VERSION}.tar.gz"
 tar xf "${VERSION}.tar.gz"
 rm  "${VERSION}.tar.gz"
 
-mv "${REPO_NAME}-${VERSION}" jdk8
-pushd jdk8
+mv "${REPO_NAME}-${VERSION}" openjdk
+pushd openjdk
 
 repos="corba hotspot jdk jaxws jaxp langtools nashorn"
 if [ aarch64-port = $PROJECT_NAME ] ; then
@@ -60,12 +60,15 @@ do
     mv "${subrepo}-${VERSION}" "${subrepo}"
 done
 
-if [ -e jdk ] ; then 
-  rm -vr jdk/src/share/native/sun/security/ec/impl
-fi
+echo "Removing EC source code we don't build"
+rm -vrf jdk/src/share/native/sun/security/ec/impl
+
+echo "Syncing EC list with NSS"
+patch -Np0 < ../../pr2126.patch
+
 popd
 
-tar cJf ${REPO_NAME}-${VERSION}.tar.xz jdk8
+tar cJf ${REPO_NAME}-${VERSION}.tar.xz openjdk
 
 popd
 
