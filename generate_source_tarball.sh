@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Generates the 'source tarball' for JDK 8 projects.
 #
 # Usage: generate_source_tarball.sh project_name repo_name tag
@@ -63,8 +62,12 @@ done
 echo "Removing EC source code we don't build"
 rm -vrf jdk/src/share/native/sun/security/ec/impl
 
+#get this file http://icedtea.classpath.org/hg/icedtea/raw-file/tip/patches/pr2126.patch (from http://icedtea.classpath.org//hg/icedtea?cmd=changeset;node=8d2c9a898f50)
+#from most correct tag
+#and use it like below. Do not push it or publish it (see http://icedtea.classpath.org/bugzilla/show_bug.cgi?id=2126)
+pwd
 echo "Syncing EC list with NSS"
-patch -Np0 < ../../pr2126.patch
+patch -Np1 < ../../pr2126.patch
 
 popd
 
