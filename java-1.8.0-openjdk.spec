@@ -116,11 +116,11 @@
 
 # Standard JPackage naming and versioning defines.
 %global origin          openjdk
-%global updatever       51
-%global buildver        b16
-%global aarch64_updatever 51
-%global aarch64_buildver b16
-%global aarch64_changesetid aarch64-jdk8u51-b16
+%global updatever       60
+%global buildver        b27
+%global aarch64_updatever 60
+%global aarch64_buildver b24.2
+%global aarch64_changesetid aarch64-jdk8u%{aarch64_updatever}-%{aarch64_buildver}
 # priority must be 7 digits in total
 %global priority        18000%{updatever}
 %global javaver         1.8.0
@@ -566,7 +566,7 @@ Requires: ca-certificates
 # Require jpackage-utils for ownership of /usr/lib/jvm/
 Requires: jpackage-utils
 # Require zoneinfo data provided by tzdata-java subpackage.
-Requires: tzdata-java >= 2015d-2
+Requires: tzdata-java >= 2015d
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools
 # Post requires alternatives to install tool alternatives.
@@ -661,7 +661,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 5.%{buildver}%{?dist}
+Release: 14.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -682,8 +682,8 @@ URL:      http://openjdk.java.net/
 # Source from upstrem OpenJDK8 project. To regenerate, use
 # ./generate_source_tarball.sh jdk8u jdk8u jdk8u%%{updatever}-%%{buildver}
 # ./generate_source_tarball.sh aarch64-port jdk8 %%{aarch64_hg_tag}
-Source0:  jdk8u-jdk8u%{updatever}-%{buildver}.tar.xz
-Source1:  jdk8u-%{aarch64_changesetid}.tar.xz
+Source0:  jdk8u60-jdk8u%{updatever}-%{buildver}.tar.xz
+Source1:  jdk8-%{aarch64_changesetid}.tar.xz
 
 # Custom README for -src subpackage
 Source2:  README.src
@@ -736,9 +736,6 @@ Patch13: libjpeg-turbo-1.4-compat.patch
 # OpenJDK specific patches
 #
 
-# http://hg.openjdk.java.net/jdk9/hs/hotspot/rev/471b684ff43e
-# allow build on Linux 4.x kernels
-Patch99: java-1.8.0-openjdk-linux-4.x.patch
 # JVM heap size changes for s390 (thanks to aph)
 Patch100: %{name}-s390-java-opts.patch
 # Type fixing for s390
@@ -747,42 +744,14 @@ Patch102: %{name}-size_t.patch
 Patch201: system-libjpeg.patch
 Patch202: system-libpng.patch
 Patch203: system-lcms.patch
-Patch204: zero-interpreter-fix.patch
 
 Patch300: jstack-pr1845.patch
 
-# Fixed in upstream 9. See upstream bug:
-# https://bugs.openjdk.java.net/browse/JDK-8064815
-Patch400: ppc_stack_overflow_fix.patch 
-# Fixed in upstream 9. See upstream bug:
-# https://bugs.openjdk.java.net/browse/JDK-8067330
-Patch401: fix_ZERO_ARCHDEF_ppc.patch
-# Fixed in upstream 9. See upstream bug:
-# https://bugs.openjdk.java.net/browse/JDK-8067331
-Patch402: atomic_linux_zero.inline.hpp.patch
 # Fixes StackOverflowError on ARM32 bit Zero. See RHBZ#1206656
 Patch403: rhbz1206656_fix_current_stack_pointer.patch
 
-#both upstreamed, will fly away in u60 (bug IDs are Red Hat bug IDs)
-Patch501: 1182011_JavaPrintApiDoesNotPrintUmlautCharsWithPostscriptOutputCorrectly.patch
-Patch502: 1182694_javaApplicationMenuMisbehave.patch
-
-# S8087156, PR2444: SetupNativeCompilation ignores CFLAGS_release for cpp files (in 8u60)
-Patch503: pr2444.patch
 # PR2095, RH1163501: 2048-bit DH upper bound too small for Fedora infrastructure (sync with IcedTea 2.x)
 Patch504: rh1163501.patch
-# 6584008, PR2192, RH1173326: jvmtiStringPrimitiveCallback should not be invoked when string value is null (in 8u60)
-Patch505: rh1173326.patch
-# S8074761, PR2471: Empty optional parameters of LDAP query are not interpreted as empty (in 8u60)
-Patch506: rh1194226.patch
-# S8078482, PR2398, RH1201393: ppc: pass thread to throw_AbstractMethodError (in 8u60)
-Patch507: rh1201393.patch
-# S6991580, PR2403, RH1210739: IPv6 Nameservers in resolv.conf throws NumberFormatException (in 8u60)
-Patch508: rh1210739.patch
-# S8078654, PR2332, RH1212268: CloseTTFontFileFunc callback should be removed (in 8u60)
-Patch509: rh1212268.patch
-# S8078490, PR2431, RH1213280: Missed submissions in ForkJoinPool
-Patch510: rh1213280.patch
 # S4890063, PR2304, RH1214835: HPROF: default text truncated when using doe=n option (upstreaming post-CPU 2015/07)
 Patch511: rh1214835.patch
 
@@ -829,11 +798,7 @@ BuildRequires: tzdata-java >= 2015d
 
 # cacerts build requirement.
 BuildRequires: openssl
-# execstack build requirement.
-# no prelink on ARM yet
-%ifnarch %{arm} %{aarch64} %{ppc64le}
-BuildRequires: prelink
-%endif
+#prelink was removed from fedora
 %if %{with_systemtap}
 BuildRequires: systemtap-sdt-devel
 %endif
@@ -1026,14 +991,17 @@ if [ $prioritylength -ne 7 ] ; then
  exit 14
 fi
 # For old patches
-ln -s openjdk jdk8
 # Swap HotSpot for AArch64 port
 %ifarch %{aarch64}
-pushd openjdk
-rm -r hotspot
+#pushd openjdk
+#rm -r hotspot
+# tmp - containing whole aarch64 forest
+rm -r openjdk
 tar xf %{SOURCE1}
-popd
+#popd
 %endif
+ln -s openjdk jdk8
+
 cp %{SOURCE2} .
 
 # replace outdated configure guess script
@@ -1048,16 +1016,17 @@ cp %{SOURCE101} openjdk/common/autoconf/build-aux/
 # Remove libraries that are linked
 sh %{SOURCE12}
 
-%patch99
-
+#pure aarch64 forest does not have them
+%ifnarch %{aarch64}
 # Add AArch64 support to configure & JDK build
 %patch9999
+%endif
 
 %patch201
 %patch202
 %patch203
+
 %ifnarch %{aarch64}
-%patch204
 %endif
 
 %patch1
@@ -1076,10 +1045,6 @@ sh %{SOURCE12}
 %endif
 
 # Zero PPC fixes.
-#  TODO: propose them upstream
-%patch400
-%patch401
-%patch402
 %patch403
 
 # HotSpot ppc64le patch is different depending
@@ -1090,27 +1055,19 @@ sh %{SOURCE12}
 %patch600
 %endif
 
+#pure aarch64 forest does not have them
+%ifnarch %{aarch64}
 %patch601
 %patch602
+%endif
 
-%patch501
-%patch502
-%patch503
 %patch504
-%patch505
-%patch506
-%patch507
-%patch508
-%patch509
-%patch510
 %patch511
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
 tar xzf %{SOURCE8}
-
 %patch300
-
 %if %{include_debug_build}
 cp -r tapset tapset%{debug_suffix}
 %endif
@@ -1160,9 +1117,10 @@ export CFLAGS="$CFLAGS -mieee"
 %endif
 
 EXTRA_CFLAGS="-fstack-protector-strong"
-#see https://bugzilla.redhat.com/show_bug.cgi?id=1120792
-EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-devirtualize -Wno-return-local-addr"
-EXTRA_CPP_FLAGS="-fno-devirtualize -Wno-return-local-addr"
+# Disable various optimizations to fix miscompliation. See:
+# - https://bugzilla.redhat.com/show_bug.cgi?id=1120792
+EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-devirtualize"
+EXTRA_CPP_FLAGS="-fno-devirtualize -fno-tree-vrp"
 # PPC/PPC64 needs -fno-tree-vectorize since -O3 would
 # otherwise generate wrong code producing segfaults.
 %ifarch %{power64} ppc
@@ -1789,6 +1747,10 @@ end
 %endif
 
 %changelog
+* Thu Aug 27 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.60-14.b24
+- sync with f23
+- updaed to u60
+
 * Thu Aug 13 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.51-5.b16
 - another touching attempt to polycies...
 
