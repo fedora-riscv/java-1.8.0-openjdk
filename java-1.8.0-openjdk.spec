@@ -847,6 +847,8 @@ BuildRequires: openssl
 BuildRequires: systemtap-sdt-devel
 %endif
 
+ExcludeArch: armv7hl
+
 
 # this is built always, also during debug-only build
 # when it is built in debug-only, then this package is just placeholder
@@ -1774,6 +1776,7 @@ end
 - fix build on many cores machines
 - reworked sources generating scripts
 - moved to single source usptream sources (integration forest)
+- temporarily excluded armv7hl (rhbz#1290936)
 
 * Fri Nov 27 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-4.b17
 - partial sync with rawhide
