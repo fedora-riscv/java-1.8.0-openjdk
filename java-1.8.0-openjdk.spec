@@ -38,6 +38,13 @@
 # note, that order  normal_suffix debug_suffix, in case of both enabled,
 # is expected in one single case at the end of build
 
+# Filter out flags from the optflags macro that cause problems with the OpenJDK build
+# We filter out -O flags so that the optimisation of HotSpot is not lowered from O3 to O2
+# We filter out -Wall which will otherwise cause HotSpot to produce hundreds of thousands of warnings (100+mb logs)
+# We replace it with -Wformat (required by -Werror=format-security) and -Wno-cpp to avoid FORTIFY_SOURCE warnings
+# We filter out -fexceptions as the HotSpot build explicitly does -fno-exceptions and it's otherwise the default for C++
+%global ourflags %(echo %optflags | sed -e 's|-Wall|-Wformat -Wno-cpp|' | sed -r -e 's|-O[0-9]*||')
+%global ourcppflags %(echo %ourflags | sed -e 's|-fexceptions||')
 
 %global aarch64         aarch64 arm64 armv8
 # sometimes we need to distinguish big and little endian PPC64
@@ -107,13 +114,6 @@
 %global with_systemtap 0
 %endif
 
-# AArch64 currently uses a different OpenJDK source tarball
-%ifarch %{aarch64}
-%global openjdk_sourceid 1
-%else
-%global openjdk_sourceid 0
-%endif
-
 # Convert an absolute path to a relative path.  Each symbolic link is
 # specified relative to the directory in which it is installed so that
 # it will resolve properly within chrooted installations.
@@ -123,13 +123,19 @@
 
 # Standard JPackage naming and versioning defines.
 %global origin          openjdk
-%global updatever       65
-%global buildver        b17
-%global aarch64_updatever %{updatever}
-%global aarch64_buildver  %{buildver}
-%global aarch64_changesetid aarch64-jdk8u%{aarch64_updatever}-%{aarch64_buildver}
-# priority must be 7 digits in total
-%global priority        18000%{updatever}
+# note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
+%global project         aarch64-port
+%global repo            jdk8u60
+%global revision        aarch64-jdk8u65-b17
+# eg # jdk8u60-b27 -> jdk8u60 or # aarch64-jdk8u60-b27 -> aarch64-jdk8u60  (dont forget spec escape % by %%)
+%global whole_update    %(VERSION=%{revision}; echo ${VERSION%%-*})
+# eg  jdk8u60 -> 60 or aarch64-jdk8u60 -> 60
+%global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
+# eg jdk8u60-b27 -> b27
+%global buildver        %(VERSION=%{revision}; echo ${VERSION##*-})
+# priority must be 7 digits in total. The expression is workarounding tip
+%global priority        %(TIP=18000%{updatever};  echo ${TIP/tip/99})
+
 %global javaver         1.8.0
 
 # parametrized macros are order-sensitive
@@ -698,7 +704,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 4.%{buildver}%{?dist}
+Release: 5.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -716,11 +722,10 @@ Group:   Development/Languages
 License:  ASL 1.1 and ASL 2.0 and GPL+ and GPLv2 and GPLv2 with exceptions and LGPL+ and LGPLv2 and MPLv1.0 and MPLv1.1 and Public Domain and W3C
 URL:      http://openjdk.java.net/
 
-# Sources from internal security patched trees.
-# ./generate_local_tarball.sh <path to 8u65 sources> jdk8u%%{updatever}-%%{buildver}
-# ./generate_local_tarball.sh <path to aarch64-port 8u65 sources> %%{aarch64_changesetid}
-Source0:  jdk8u-jdk8u%{updatever}-%{buildver}.tar.xz
-Source1:  jdk8u-%{aarch64_changesetid}.tar.xz
+# Source from upstrem OpenJDK8 project. To regenerate, use
+# aarch64-port now contains integration forest of both aarch64 and normal jdk
+# ./generate_source_tarball.sh aarch64-port jdk8u60 aarch64-jdk8u65-b17
+Source0:  %{project}-%{repo}-%{revision}.tar.xz
 
 # Custom README for -src subpackage
 Source2:  README.src
@@ -757,15 +762,12 @@ Patch1:   %{name}-accessible-toolkit.patch
 
 # Restrict access to java-atk-wrapper classes
 Patch3: java-atk-wrapper-security.patch
-# RHBZ 808293
-Patch4: %{name}-PStack-808293.patch
 # Allow multiple initialization of PKCS11 libraries
 Patch5: multiple-pkcs11-library-init.patch
 # Include all sources in src.zip
 Patch7: include-all-srcs.patch
 # Problem discovered with make 4.0
 Patch12: removeSunEcProvider-RH1154143.patch
-Patch13: libjpeg-turbo-1.4-compat.patch
 
 #
 # OpenJDK specific patches
@@ -785,18 +787,25 @@ Patch300: jstack-pr1845.patch
 # Fixes StackOverflowError on ARM32 bit Zero. See RHBZ#1206656
 Patch403: rhbz1206656_fix_current_stack_pointer.patch
 
+# PR2428: OpenJDK build can't handle commas in LDFLAGS
+Patch501: pr2428.patch
+# PR2462: Backport "8074839: Resolve disabled warnings for libunpack and the unpack200 binary"
+# This fixes printf warnings that lead to build failure with -Werror=format-security from optflags
+Patch502: pr2462-01.patch
+Patch503: pr2462-02.patch
 # PR2095, RH1163501: 2048-bit DH upper bound too small for Fedora infrastructure (sync with IcedTea 2.x)
 Patch504: rh1163501.patch
+# S8143855: Bad printf formatting in frame_zero.cpp (upstream from u76)
+Patch505: 8143855.patch
 # S4890063, PR2304, RH1214835: HPROF: default text truncated when using doe=n option (upstreaming post-CPU 2015/07)
 Patch511: rh1214835.patch
 
 # RH1191652; fix name of ppc64le architecture
-Patch600: %{name}-rh1191652-hotspot.patch
 Patch601: %{name}-rh1191652-root.patch
 Patch602: %{name}-rh1191652-jdk.patch
 Patch603: %{name}-rh1191652-hotspot-aarch64.patch
+Patch604: aarch64-ifdefbugfix.patch
 Patch605: soundFontPatch.patch
-Patch9999: enableArm64.patch
 
 BuildRequires: autoconf
 BuildRequires: automake
@@ -1018,7 +1027,7 @@ if [ %{include_debug_build} -eq 0 -a  %{include_normal_build} -eq 0 ] ; then
   echo "you have disabled both include_debug_build and include_debug_build. no go."
   exit 13
 fi
-%setup -q -c -n %{uniquesuffix ""} -T -a %{openjdk_sourceid}
+%setup -q -c -n %{uniquesuffix ""} -T -a 0
 # https://bugzilla.redhat.com/show_bug.cgi?id=1189084
 prioritylength=`expr length %{priority}`
 if [ $prioritylength -ne 7 ] ; then
@@ -1042,23 +1051,15 @@ cp %{SOURCE101} openjdk/common/autoconf/build-aux/
 # Remove libraries that are linked
 sh %{SOURCE12}
 
-#pure aarch64 forest does not have them
-%ifnarch %{aarch64}
-# Add AArch64 support to configure & JDK build
-%patch9999
-%endif
-
 %patch201
 %patch202
 %patch203
 
 %patch1
 %patch3
-%patch4
 %patch5
 %patch7
 %patch12
-%patch13
 
 # s390 build fixes
 %ifarch s390
@@ -1069,22 +1070,17 @@ sh %{SOURCE12}
 # Zero PPC fixes.
 %patch403
 
-# HotSpot ppc64le patch is different depending
-# on whether we are using 2.5 or 2.6 HotSpot.
-%ifarch %{aarch64}
 %patch603
-%else
-%patch600
-%endif
-
-#pure aarch64 forest does not have them
-%ifnarch %{aarch64}
 %patch601
 %patch602
-%endif
+%patch604
 %patch605
 
+%patch501
+%patch502
+%patch503
 %patch504
+%patch505
 %patch511
 
 # Extract systemtap tapsets
@@ -1128,8 +1124,12 @@ done
 
 %build
 # How many cpu's do we have?
-export NUM_PROC=`/usr/bin/getconf _NPROCESSORS_ONLN 2> /dev/null || :`
+export NUM_PROC=%(/usr/bin/getconf _NPROCESSORS_ONLN 2> /dev/null || :)
 export NUM_PROC=${NUM_PROC:-1}
+%if 0%{?_smp_ncpus_max}
+# Honor %%_smp_ncpus_max
+[ ${NUM_PROC} -gt %{?_smp_ncpus_max} ] && export NUM_PROC=%{?_smp_ncpus_max}
+%endif
 
 # Build IcedTea and OpenJDK.
 %ifarch s390x sparc64 alpha %{power64} %{aarch64}
@@ -1139,11 +1139,12 @@ export ARCH_DATA_MODEL=64
 export CFLAGS="$CFLAGS -mieee"
 %endif
 
-EXTRA_CFLAGS="-fstack-protector-strong"
+# We use ourcppflags because the OpenJDK build seems to
+# pass these to the HotSpot C++ compiler...
+EXTRA_CFLAGS="%ourcppflags"
 # Disable various optimizations to fix miscompliation. See:
 # - https://bugzilla.redhat.com/show_bug.cgi?id=1120792
-EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-devirtualize"
-EXTRA_CPP_FLAGS="-fno-devirtualize -fno-tree-vrp"
+EXTRA_CPP_FLAGS="%ourcppflags -fno-tree-vrp"
 # PPC/PPC64 needs -fno-tree-vectorize since -O3 would
 # otherwise generate wrong code producing segfaults.
 %ifarch %{power64} ppc
@@ -1176,7 +1177,7 @@ bash ../../configure \
     --with-update-version=%{updatever} \
     --with-build-number=%{buildver} \
 %ifarch %{aarch64}
-    --with-user-release-suffix="aarch64-%{aarch64_updatever}-%{aarch64_buildver}-%{aarch64_changesetid}" \
+    --with-user-release-suffix="aarch64-%{updatever}-%{buildver}" \
 %endif
     --with-boot-jdk=/usr/lib/jvm/java-openjdk \
     --with-debug-level=$debugbuild \
@@ -1189,6 +1190,7 @@ bash ../../configure \
     --with-stdc++lib=dynamic \
     --with-extra-cxxflags="$EXTRA_CPP_FLAGS" \
     --with-extra-cflags="$EXTRA_CFLAGS" \
+    --with-extra-ldflags="%__global_ldflags" \
     --with-num-cores="$NUM_PROC"
 
 cat spec.gmk
@@ -1765,6 +1767,14 @@ end
 %endif
 
 %changelog
+* Mon Dec 14 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-5.b17
+- partial sync with rawhide
+- cleaned patches
+- adapted to global flags (hardened build)
+- fix build on many cores machines
+- reworked sources generating scripts
+- moved to single source usptream sources (integration forest)
+
 * Fri Nov 27 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-4.b17
 - partial sync with rawhide
 - priority of debug subpackages lowered by one
