@@ -611,7 +611,7 @@ Requires: tzdata-java >= 2015d
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools
 # tool to copy jdk's configs - should be Recommends only, but then only dnf/yum eforce it, not rpm transaction and so no configs are persisted when pure rpm -u is run. I t may be consiedered as regression
-Requires:	copy-jdk-configs >= 1.1-2
+Requires:	copy-jdk-configs >= 1.1-3
 OrderWithRequires: copy-jdk-configs
 # Post requires alternatives to install tool alternatives.
 Requires(post):   %{_sbindir}/alternatives
