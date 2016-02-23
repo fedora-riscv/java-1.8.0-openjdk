@@ -37,6 +37,7 @@
 %global build_loop  %{build_loop1} %{build_loop2}
 # note, that order  normal_suffix debug_suffix, in case of both enabled,
 # is expected in one single case at the end of build
+%global rev_build_loop  %{build_loop2} %{build_loop1}
 
 %global bootstrap_build 0
 
@@ -734,7 +735,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 4.%{buildver}%{?dist}
+Release: 5.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -805,12 +806,18 @@ Patch511: rh1214835.patch
 Patch512: no_strict_overflow.patch
 
 # Arch-specific upstreamable patches
-# JVM heap size changes for s390 (thanks to aph)
+# PR2415: JVM -Xmx requirement is too high on s390
 Patch100: %{name}-s390-java-opts.patch
 # Type fixing for s390
 Patch102: %{name}-size_t.patch
 # Use "%z" for size_t on s390 as size_t != intptr_t
 Patch103: s390-size_t_format_flags.patch
+
+# AArch64-specific upstreamable patches
+# Revert 'Fixes to work around "missing 'client' JVM" error messages' and sync jvm.cfg with OpenJDK 9
+Patch104: remove_aarch64_jvm.cfg_divergence.patch
+# RH1300630, 8147805: aarch64: C1 segmentation fault due to inline Unsafe.getAndSetObject
+Patch105: rh1300630.patch
 
 # Patches which need backporting to 8u
 # S8073139, RH1191652; fix name of ppc64le architecture
@@ -1105,11 +1112,13 @@ sh %{SOURCE12}
 %patch12
 
 # s390 build fixes
-%ifarch s390
 %patch100
 %patch102
 %patch103
-%endif
+
+# aarch64 build fixes
+%patch104
+%patch105
 
 # Zero PPC fixes.
 %patch403
@@ -1215,9 +1224,6 @@ bash ../../configure \
     --with-milestone="fcs" \
     --with-update-version=%{updatever} \
     --with-build-number=%{buildver} \
-%ifarch %{aarch64}
-    --with-user-release-suffix="aarch64-%{updatever}-%{buildver}" \
-%endif
     --with-boot-jdk=/usr/lib/jvm/java-openjdk \
     --with-debug-level=$debugbuild \
     --enable-unlimited-crypto \
@@ -1266,10 +1272,19 @@ export JAVA_HOME=$(pwd)/%{buildoutputdir $suffix}/images/%{j2sdkimage}
 # Install nss.cfg right away as we will be using the JRE above
 install -m 644 %{SOURCE11} $JAVA_HOME/jre/lib/security/
 
-
 # Use system-wide tzdata
 rm $JAVA_HOME/jre/lib/tzdb.dat
 ln -s %{_datadir}/javazi-1.8/tzdb.dat $JAVA_HOME/jre/lib/tzdb.dat
+
+#build cycles
+done
+
+%check
+
+# We test debug first as it will give better diagnostics on a crash
+for suffix in %{rev_build_loop} ; do
+
+export JAVA_HOME=$(pwd)/%{buildoutputdir $suffix}/images/%{j2sdkimage}
 
 # Check unlimited policy has been used
 $JAVA_HOME/bin/javac -d . %{SOURCE13}
@@ -1301,8 +1316,6 @@ $JAVA_HOME/bin/javap -l java.lang.Object | grep LocalVariableTable
 $JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep "Compiled from"
 $JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LineNumberTable
 $JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LocalVariableTable
-
-#build cycles
 done
 
 %install
@@ -1680,6 +1693,9 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Mon Feb 22 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.72-.b15
+- sync from master
+
 * Fri Feb 05 2016 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.71-4.b15
 - Backport S8148351: Only display resolved symlink for compiler, do not change path
 
