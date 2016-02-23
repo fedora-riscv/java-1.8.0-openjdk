@@ -1693,7 +1693,7 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
-* Mon Feb 22 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.72-.b15
+* Mon Feb 22 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.72-5.b15
 - sync from master
 
 * Fri Feb 05 2016 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.71-4.b15
