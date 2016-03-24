@@ -150,7 +150,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global project         aarch64-port
 %global repo            jdk8u
-%global revision        aarch64-jdk8u72-b15
+%global revision        aarch64-jdk8u77-b03
 # eg # jdk8u60-b27 -> jdk8u60 or # aarch64-jdk8u60-b27 -> aarch64-jdk8u60  (dont forget spec escape % by %%)
 %global whole_update    %(VERSION=%{revision}; echo ${VERSION%%-*})
 # eg  jdk8u60 -> 60 or aarch64-jdk8u60 -> 60
@@ -735,7 +735,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 3.%{buildver}%{?dist}
+Release: 1.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -755,8 +755,9 @@ URL:      http://openjdk.java.net/
 
 # aarch64-port now contains integration forest of both aarch64 and normal jdk
 # Source from upstream OpenJDK8 project. To regenerate, use
-# VERSION=aarch64-jdk8u71-b15 FILE_NAME_ROOT=${VERSION}
+# VERSION=aarch64-jdk8u77-b03 FILE_NAME_ROOT=aarch64-port-jdk8u-${VERSION}
 # REPO_ROOT=<path to checked-out repository> generate_source_tarball.sh
+# where the source is obtained from http://hg.openjdk.java.net/%%{project}/%%{repo}
 Source0: %{project}-%{repo}-%{revision}.tar.xz
 
 # Custom README for -src subpackage
@@ -814,12 +815,6 @@ Patch100: %{name}-s390-java-opts.patch
 Patch102: %{name}-size_t.patch
 # Use "%z" for size_t on s390 as size_t != intptr_t
 Patch103: s390-size_t_format_flags.patch
-
-# AArch64-specific upstreamable patches
-# Revert 'Fixes to work around "missing 'client' JVM" error messages' and sync jvm.cfg with OpenJDK 9
-Patch104: remove_aarch64_jvm.cfg_divergence.patch
-# RH1300630, 8147805: aarch64: C1 segmentation fault due to inline Unsafe.getAndSetObject
-Patch105: rh1300630.patch
 
 # Patches which need backporting to 8u
 # S8073139, RH1191652; fix name of ppc64le architecture
@@ -884,7 +879,6 @@ BuildRequires: libXtst-devel
 BuildRequires: nss-devel
 BuildRequires: pkgconfig
 BuildRequires: xorg-x11-proto-devel
-#BuildRequires: redhat-lsb
 BuildRequires: zip
 BuildRequires: java-1.8.0-openjdk-devel
 # Zero-assembler build requirement.
@@ -1117,10 +1111,6 @@ sh %{SOURCE12}
 %patch100
 %patch102
 %patch103
-
-# aarch64 build fixes
-%patch104
-%patch105
 
 # Zero PPC fixes.
 %patch403
@@ -1701,6 +1691,9 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Wed Mar 23 2016 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.77-1.b03
+- Update to u77b03.
+
 * Tue Feb 23 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.72-3.b15
 - returning accidentlay removed hunk from renamed and so wrongly merged remove_aarch64_jvm.cfg_divergence.patch
 
