@@ -82,6 +82,8 @@
 #looks liekopenjdk RPM specific bug
 # Always set this so the nss.cfg file is not broken
 %global NSS_LIBDIR %(pkg-config --variable=libdir nss)
+%global NSS_LIBS %(pkg-config --libs nss)
+%global NSS_CFLAGS %(pkg-config --cflags nss-softokn)
 
 # fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349
 %global _privatelibs libmawt[.]so.*
@@ -803,10 +805,18 @@ Patch5: multiple-pkcs11-library-init.patch
 Patch6: disable-doclint-by-default.patch
 # PR2095, RH1163501: 2048-bit DH upper bound too small for Fedora infrastructure (sync with IcedTea 2.x)
 Patch504: rh1163501.patch
-# S4890063, PR2304, RH1214835: HPROF: default text truncated when using doe=n option (upstreaming post-CPU 2015/07)
+# S4890063, PR2304, RH1214835: HPROF: default text truncated when using doe=n option
 Patch511: rh1214835.patch
 # Turn off strict overflow on IndicRearrangementProcessor{,2}.cpp following 8140543: Arrange font actions
 Patch512: no_strict_overflow.patch
+# Support for building the SunEC provider with the system NSS installation
+# PR1983: Support using the system installation of NSS with the SunEC provider
+# PR2127: SunEC provider crashes when built using system NSS
+# PR2815: Race condition in SunEC provider with system NSS
+Patch513: pr1983-jdk.patch
+Patch514: pr1983-root.patch
+Patch515: pr2127.patch
+Patch516: pr2815.patch
 
 # Arch-specific upstreamable patches
 # PR2415: JVM -Xmx requirement is too high on s390
@@ -815,6 +825,10 @@ Patch100: %{name}-s390-java-opts.patch
 Patch102: %{name}-size_t.patch
 # Use "%z" for size_t on s390 as size_t != intptr_t
 Patch103: s390-size_t_format_flags.patch
+
+# AArch64-specific upstreamable patches
+# Remove template in AArch64 port which causes issues with GCC 6
+Patch106: remove_aarch64_template_for_gcc6.patch
 
 # Patches which need backporting to 8u
 # S8073139, RH1191652; fix name of ppc64le architecture
@@ -829,13 +843,17 @@ Patch202: system-libpng.patch
 Patch203: system-lcms.patch
 # PR2462: Backport "8074839: Resolve disabled warnings for libunpack and the unpack200 binary"
 # This fixes printf warnings that lead to build failure with -Werror=format-security from optflags
-Patch502: pr2462-01.patch
-Patch503: pr2462-02.patch
+Patch502: pr2462.patch
 # S8140620, PR2769: Find and load default.sf2 as the default soundbank on Linux
+# waiting on upstream: http://mail.openjdk.java.net/pipermail/jdk8u-dev/2016-January/004916.html
 Patch605: soundFontPatch.patch
 # S8148351, PR2842: Only display resolved symlink for compiler, do not change path
 Patch506: pr2842-01.patch
 Patch507: pr2842-02.patch
+# S8150954, RH1176206, PR2866: Taking screenshots on x11 composite desktop produces wrong result
+# In progress: http://mail.openjdk.java.net/pipermail/awt-dev/2016-March/010742.html
+Patch508: rh1176206-jdk.patch
+Patch509: rh1176206-root.patch
 
 # Patches upstream and appearing in 8u76
 # Fixes StackOverflowError on ARM32 bit Zero. See RHBZ#1206656
@@ -849,8 +867,6 @@ Patch505: 8143855.patch
 Patch201: system-libjpeg.patch
 
 # Local fixes
-# Turns off ECC support as we don't ship the SunEC provider currently
-Patch12: removeSunEcProvider-RH1154143.patch
 
 # Non-OpenJDK fixes
 Patch300: jstack-pr1845.patch
@@ -1105,12 +1121,14 @@ sh %{SOURCE12}
 %patch5
 %patch6
 %patch7
-%patch12
 
 # s390 build fixes
 %patch100
 %patch102
 %patch103
+
+# aarch64 build fixes
+%patch106
 
 # Zero PPC fixes.
 %patch403
@@ -1121,13 +1139,18 @@ sh %{SOURCE12}
 %patch605
 
 %patch502
-%patch503
 %patch504
 %patch505
 %patch506
 %patch507
+%patch508
+%patch509
 %patch511
 %patch512
+%patch513
+%patch514
+%patch515
+%patch516
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1214,6 +1237,8 @@ fi
 mkdir -p %{buildoutputdir $suffix}
 pushd %{buildoutputdir $suffix}
 
+NSS_LIBS="%{NSS_LIBS} -lfreebl" \
+NSS_CFLAGS="%{NSS_CFLAGS}" \
 bash ../../configure \
 %ifnarch %{jit_arches}
     --with-jvm-variants=zero \
@@ -1225,6 +1250,7 @@ bash ../../configure \
     --with-boot-jdk=/usr/lib/jvm/java-openjdk \
     --with-debug-level=$debugbuild \
     --enable-unlimited-crypto \
+    --enable-system-nss \
     --with-zlib=system \
     --with-libjpeg=system \
     --with-giflib=system \
@@ -1692,6 +1718,7 @@ require "copy_jdk_configs.lua"
 
 %changelog
 * Wed Mar 23 2016 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.77-1.b03
+- enabled sunEC and used system nss
 - Update to u77b03.
 
 * Tue Feb 23 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.72-3.b15
