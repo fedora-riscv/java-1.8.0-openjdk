@@ -742,7 +742,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 2.%{buildver}%{?dist}
+Release: 3.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -828,6 +828,7 @@ Patch515: pr2127.patch
 Patch516: pr2815.patch
 Patch517: pr2899.patch
 Patch518: httpsFix1329342.patch
+Patch519: jdwpCrash.abrt.patch
 
 # Arch-specific upstreamable patches
 # PR2415: JVM -Xmx requirement is too high on s390
@@ -1171,6 +1172,7 @@ sh %{SOURCE12}
 %patch515
 %patch516
 %patch517
+%patch518
 %patch518
 
 # Extract systemtap tapsets
@@ -1742,6 +1744,9 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Thu May 19 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.91-3.b14
+- added patch519, jdwpCrash.abrt.patch to fix trasnportation error
+
 * Sun Apr 24 2016 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.91-2.b14
 - added patch518 httpsFix1329342.patch
 - test based on SOURCE14 enabled
