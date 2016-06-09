@@ -95,12 +95,6 @@
 %global NSS_LIBDIR %(pkg-config --variable=libdir nss)
 %global NSS_LIBS %(pkg-config --libs nss)
 %global NSS_CFLAGS %(pkg-config --cflags nss-softokn)
-# see https://bugzilla.redhat.com/show_bug.cgi?id=1332456
-%global NSSSOFTOKN_BUILDTIME_NUMBER %(pkg-config --modversion nss-softokn || : )
-%global NSS_BUILDTIME_NUMBER %(pkg-config --modversion nss || : )
-#this is worakround for processing of requires during srpm creation
-%global NSSSOFTOKN_BUILDTIME_VERSION %(if [ "x%{NSSSOFTOKN_BUILDTIME_NUMBER}" == "x" ] ; then echo "" ;else echo ">= %{NSSSOFTOKN_BUILDTIME_NUMBER}" ;fi)
-%global NSS_BUILDTIME_VERSION %(if [ "x%{NSS_BUILDTIME_NUMBER}" == "x" ] ; then echo "" ;else echo ">= %{NSS_BUILDTIME_NUMBER}" ;fi)
 
 
 # fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349
@@ -649,9 +643,6 @@ Requires: jpackage-utils
 Requires: tzdata-java >= 2015d
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools
-# there is need to depnd on exact version of nss
-Requires: nss %{NSS_BUILDTIME_VERSION}
-Requires: nss-softokn %{NSSSOFTOKN_BUILDTIME_VERSION}
 # tool to copy jdk's configs - should be Recommends only, but then only dnf/yum eforce it, not rpm transaction and so no configs are persisted when pure rpm -u is run. I t may be consiedered as regression
 Requires:	copy-jdk-configs >= 1.1-3
 OrderWithRequires: copy-jdk-configs
