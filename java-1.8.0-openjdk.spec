@@ -27,6 +27,13 @@
 %global include_debug_build 0
 %endif
 
+# on intels, we build shenandoah htspot
+%ifarch x86_64
+%global use_shenandoah_hotspot 0
+%else
+%global use_shenandoah_hotspot 0
+%endif
+
 %if %{include_debug_build}
 %global build_loop2 %{debug_suffix}
 %else
@@ -88,6 +95,13 @@
 %global NSS_LIBDIR %(pkg-config --variable=libdir nss)
 %global NSS_LIBS %(pkg-config --libs nss)
 %global NSS_CFLAGS %(pkg-config --cflags nss-softokn)
+# see https://bugzilla.redhat.com/show_bug.cgi?id=1332456
+%global NSSSOFTOKN_BUILDTIME_NUMBER %(pkg-config --modversion nss-softokn || : )
+%global NSS_BUILDTIME_NUMBER %(pkg-config --modversion nss || : )
+#this is worakround for processing of requires during srpm creation
+%global NSSSOFTOKN_BUILDTIME_VERSION %(if [ "x%{NSSSOFTOKN_BUILDTIME_NUMBER}" == "x" ] ; then echo "" ;else echo ">= %{NSSSOFTOKN_BUILDTIME_NUMBER}" ;fi)
+%global NSS_BUILDTIME_VERSION %(if [ "x%{NSS_BUILDTIME_NUMBER}" == "x" ] ; then echo "" ;else echo ">= %{NSS_BUILDTIME_NUMBER}" ;fi)
+
 
 # fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349
 %global _privatelibs libmawt[.]so.*
@@ -156,7 +170,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global project         aarch64-port
 %global repo            jdk8u
-%global revision        aarch64-jdk8u91-b14
+%global revision        aarch64-jdk8u92-b14
 # eg # jdk8u60-b27 -> jdk8u60 or # aarch64-jdk8u60-b27 -> aarch64-jdk8u60  (dont forget spec escape % by %%)
 %global whole_update    %(VERSION=%{revision}; echo ${VERSION%%-*})
 # eg  jdk8u60 -> 60 or aarch64-jdk8u60 -> 60
@@ -635,6 +649,9 @@ Requires: jpackage-utils
 Requires: tzdata-java >= 2015d
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools
+# there is need to depnd on exact version of nss
+Requires: nss %{NSS_BUILDTIME_VERSION}
+Requires: nss-softokn %{NSSSOFTOKN_BUILDTIME_VERSION}
 # tool to copy jdk's configs - should be Recommends only, but then only dnf/yum eforce it, not rpm transaction and so no configs are persisted when pure rpm -u is run. I t may be consiedered as regression
 Requires:	copy-jdk-configs >= 1.1-3
 OrderWithRequires: copy-jdk-configs
@@ -742,7 +759,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 3.%{buildver}%{?dist}
+Release: 1.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -762,7 +779,7 @@ URL:      http://openjdk.java.net/
 
 # aarch64-port now contains integration forest of both aarch64 and normal jdk
 # Source from upstream OpenJDK8 project. To regenerate, use
-# VERSION=aarch64-jdk8u91-b14 FILE_NAME_ROOT=aarch64-port-jdk8u-${VERSION}
+# VERSION=aarch64-jdk8u92-b14 FILE_NAME_ROOT=aarch64-port-jdk8u-${VERSION}
 # REPO_ROOT=<path to checked-out repository> generate_source_tarball.sh
 # where the source is obtained from http://hg.openjdk.java.net/%%{project}/%%{repo}
 Source0: %{project}-%{repo}-%{revision}.tar.xz
@@ -822,13 +839,19 @@ Patch512: no_strict_overflow.patch
 # PR2127: SunEC provider crashes when built using system NSS
 # PR2815: Race condition in SunEC provider with system NSS
 # PR2899: Don't use WithSeed versions of NSS functions as they don't fully process the seed
+# PR2934: SunEC provider throwing KeyException with current NSS
 Patch513: pr1983-jdk.patch
 Patch514: pr1983-root.patch
 Patch515: pr2127.patch
 Patch516: pr2815.patch
 Patch517: pr2899.patch
-Patch518: httpsFix1329342.patch
-Patch519: jdwpCrash.abrt.patch
+Patch518: pr2934.patch
+# S8150954, RH1176206, PR2866: Taking screenshots on x11 composite desktop produces wrong result
+# In progress: http://mail.openjdk.java.net/pipermail/awt-dev/2016-March/010742.html
+Patch508: rh1176206-jdk.patch
+Patch509: rh1176206-root.patch
+# RH1337583, PR2974: PKCS#10 certificate requests now use CRLF line endings rather than system line endings
+Patch523: pr2974-rh1337583.patch
 
 # Arch-specific upstreamable patches
 # PR2415: JVM -Xmx requirement is too high on s390
@@ -837,10 +860,8 @@ Patch100: %{name}-s390-java-opts.patch
 Patch102: %{name}-size_t.patch
 # Use "%z" for size_t on s390 as size_t != intptr_t
 Patch103: s390-size_t_format_flags.patch
-
-# AArch64-specific upstreamable patches
-# Remove template in AArch64 port which causes issues with GCC 6
-Patch106: remove_aarch64_template_for_gcc6.patch
+# PR2991, RH1341258: JVM on PPC64 LE crashes due to an illegal instruction in JITed code
+Patch524: pr2991-rh1341258.patch
 
 # Patches which need backporting to 8u
 # S8073139, RH1191652; fix name of ppc64le architecture
@@ -862,29 +883,30 @@ Patch605: soundFontPatch.patch
 # S8148351, PR2842: Only display resolved symlink for compiler, do not change path
 Patch506: pr2842-01.patch
 Patch507: pr2842-02.patch
-# S8150954, RH1176206, PR2866: Taking screenshots on x11 composite desktop produces wrong result
-# In progress: http://mail.openjdk.java.net/pipermail/awt-dev/2016-March/010742.html
-Patch508: rh1176206-jdk.patch
-Patch509: rh1176206-root.patch
-# S8132051: Better byte behaviour for Zero
-Patch606: 8132051-zero.patch
 
-# Patches which need adding to aarch64/8u
-# S8132051: Better byte behaviour for AArch64
-Patch701: 8132051-aarch64.patch
+# Patches upstream and appearing in 8u102
+# S8148752, PR2943, RH1330188: Compiled StringBuilder code throws StringIndexOutOfBoundsException
+Patch519: 8148752-pr2943-rh1330188.patch
+# S6961123, PR2972, RH1339740:  Java application name in GNOME Shell contains funny characters
+Patch520: 6961123-pr2972-rh1339740.patch
 
-# Patches upstream and appearing in 8u76
-# Fixes StackOverflowError on ARM32 bit Zero. See RHBZ#1206656
-# 8087120: [GCC5] java.lang.StackOverflowError on Zero JVM initialization on non x86 platforms
-Patch403: rhbz1206656_fix_current_stack_pointer.patch
-# S8143855: Bad printf formatting in frame_zero.cpp 
-Patch505: 8143855.patch
+# Patches upstream and appearing in 8u112
+# S8044762, PR2960: com/sun/jdi/OptionTest.java test time out
+Patch521: 8044762-pr2960.patch
+# S8049226, PR2960: com/sun/jdi/OptionTest.java test times out again
+Patch522: 8049226-pr2960.patch
+# 8154210: Zero: Better byte behaviour
+Patch606: 8154210.patch
 
 # Patches ineligible for 8u
 # 8043805: Allow using a system-installed libjpeg
 Patch201: system-libjpeg.patch
 
 # Local fixes
+# see http://mail.openjdk.java.net/pipermail/build-dev/2016-March/016852.html thread
+Patch400: jdk8-archivedJavadoc.patch
+# PR1834, RH1022017: Reduce curves reported by SSL to those in NSS
+Patch525: pr1834-rh1022017.patch
 
 # Non-OpenJDK fixes
 Patch300: jstack-pr1845.patch
@@ -920,6 +942,8 @@ BuildRequires: java-1.8.0-openjdk-devel
 BuildRequires: libffi-devel
 %endif
 BuildRequires: tzdata-java >= 2015d
+# Build requirements for SunEC system NSS support
+BuildRequires: nss-softokn-freebl-devel >= 3.16.1
 
 # cacerts build requirement.
 BuildRequires: openssl
@@ -1115,6 +1139,15 @@ if [ $prioritylength -ne 7 ] ; then
 fi
 # For old patches
 ln -s openjdk jdk8
+%if %{use_shenandoah_hotspot}
+#on intels, repalce hotpost by shenandoah-able hotspot
+pushd openjdk
+tar -xf %{SOURCE999}
+rm -rf hotspot
+cp -r openjdk/hotspot .
+rm -rf openjdk
+popd
+%endif
 
 cp %{SOURCE2} .
 
@@ -1145,14 +1178,11 @@ sh %{SOURCE12}
 %patch102
 %patch103
 
-# Zero fixes.
-%patch403
-%patch505
-%patch606
+# ppc64le fixes
+%patch524
 
-# AArch64 fixes
-%patch106
-%patch701
+# Zero fixes.
+%patch606
 
 %patch603
 %patch601
@@ -1174,6 +1204,12 @@ sh %{SOURCE12}
 %patch517
 %patch518
 %patch519
+%patch400
+%patch520
+%patch521
+%patch522
+%patch523
+%patch525
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1744,6 +1780,14 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Tue Jun 07 2016 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.92-1.b14
+- updated to u92
+- removed upstreamed patches 8132051-aarch64.patch, 8143855.patch, criticalShenandoahFix.patch, rhbz1206656_fix_current_stack_pointer.patch
+- 8132051-zero.patch, remove_aarch64_template_for_gcc6.patch
+- jdwpCrash.abrt.patch renamed to 8044762-pr2960.patch
+- httpsFix1329342.patch renamed to pr2934.patch
+- added known regresisonos fixes for u92 scheduled for next u (519-525)
+
 * Thu May 19 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.91-3.b14
 - added patch519, jdwpCrash.abrt.patch to fix trasnportation error
 
