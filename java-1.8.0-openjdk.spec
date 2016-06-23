@@ -485,7 +485,7 @@ fi
 
 alternatives \\
   --install %{_javadocdir}/java javadocdir %{_javadocdir}/%{uniquejavadocdir %%1}/api \\
-  $PRIORITY  --family %{name}.%{_arch} 
+  $PRIORITY  --family %{name}
 exit 0
 }
 
