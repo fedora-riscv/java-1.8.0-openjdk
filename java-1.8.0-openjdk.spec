@@ -18,7 +18,7 @@
 %global build_loop1 %{normal_suffix}
 %else
 %global build_loop1 %{nil}
-%endifre
+%endif
 
 # by default we build debug build during main build only on intel arches
 %ifarch %{ix86} x86_64
