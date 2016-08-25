@@ -170,7 +170,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global project         aarch64-port
 %global repo            jdk8u
-%global revision        aarch64-jdk8u101-b14
+%global revision        aarch64-jdk8u102-b14
 # eg # jdk8u60-b27 -> jdk8u60 or # aarch64-jdk8u60-b27 -> aarch64-jdk8u60  (dont forget spec escape % by %%)
 %global whole_update    %(VERSION=%{revision}; echo ${VERSION%%-*})
 # eg  jdk8u60 -> 60 or aarch64-jdk8u60 -> 60
@@ -708,6 +708,9 @@ Provides: jce%1 = %{epoch}:%{version}
 Provides: jdbc-stdext%1 = 4.1
 Provides: java-sasl%1 = %{epoch}:%{version}
 
+#https://bugzilla.redhat.com/show_bug.cgi?id=1312019
+Provides: /usr/bin/jjs
+
 Obsoletes: java-1.7.0-openjdk-headless%1
 }
 
@@ -783,7 +786,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 3.%{buildver}%{?dist}
+Release: 1.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -815,7 +818,7 @@ Source2:  README.src
 # They are based on code contained in the IcedTea7 project.
 
 # Systemtap tapsets. Zipped up to keep it small.
-Source8: systemtap-tapset.tar.gz
+Source8: systemtap-tapset-3.1.0.tar.xz
 
 # Desktop files. Adapated from IcedTea.
 Source9: jconsole.desktop.in
@@ -838,6 +841,8 @@ Source20: repackReproduciblePolycies.sh
 # New versions of config files with aarch64 support. This is not upstream yet.
 Source100: config.guess
 Source101: config.sub
+# shenandoah hotpost
+Source999: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u102-b14.tar.xz
 
 # RPM/distribution specific patches
 
@@ -899,9 +904,6 @@ Patch203: system-lcms.patch
 # PR2462: Backport "8074839: Resolve disabled warnings for libunpack and the unpack200 binary"
 # This fixes printf warnings that lead to build failure with -Werror=format-security from optflags
 Patch502: pr2462.patch
-# S8140620, PR2769: Find and load default.sf2 as the default soundbank on Linux
-# waiting on upstream: http://mail.openjdk.java.net/pipermail/jdk8u-dev/2016-January/004916.html
-Patch605: soundFontPatch.patch
 # S8148351, PR2842: Only display resolved symlink for compiler, do not change path
 Patch506: pr2842-01.patch
 Patch507: pr2842-02.patch
@@ -917,10 +919,6 @@ Patch531: 8157306-pr3121-rh1360863.patch
 Patch532: 8162384-pr3122-rh1358661.patch
 
 # Patches upstream and appearing in 8u102
-# S8148752, PR2943, RH1330188: Compiled StringBuilder code throws StringIndexOutOfBoundsException
-Patch519: 8148752-pr2943-rh1330188.patch
-# S6961123, PR2972, RH1339740:  Java application name in GNOME Shell contains funny characters
-Patch520: 6961123-pr2972-rh1339740.patch
 # S8159244, PR3074: Partially initialized string object created by C2's string concat optimization may escape
 Patch527: 8159244-pr3074.patch
 
@@ -943,9 +941,6 @@ Patch525: pr1834-rh1022017.patch
 Patch529: corba_typo_fix.patch
 
 # Non-OpenJDK fixes
-Patch300: jstack-pr1845.patch
-# PR3090, RH1204159: SystemTap is heavily confused by multiple JDKs
-Patch301: bz1204159_java8.patch
 
 BuildRequires: autoconf
 BuildRequires: automake
@@ -1251,7 +1246,6 @@ sh %{SOURCE12}
 %patch603
 %patch601
 %patch602
-%patch605
 
 %patch502
 %patch504
@@ -1267,9 +1261,7 @@ sh %{SOURCE12}
 %patch516
 %patch517
 %patch518
-%patch519
 %patch400
-%patch520
 %patch521
 %patch522
 %patch523
@@ -1283,9 +1275,7 @@ sh %{SOURCE12}
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
-tar xzf %{SOURCE8}
-%patch300
-%patch301
+tar -x -I xz -f %{SOURCE8}
 %if %{include_debug_build}
 cp -r tapset tapset%{debug_suffix}
 %endif
@@ -1866,6 +1856,15 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Thu Aug 25 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.102-1.b14
+- updated to aarch64-jdk8u102-b14 (from aarch64-port/jdk8u)
+- updated to aarch64-shenandoah-jdk8u102-b14 (from aarch64-port/jdk8u-shenandoah) of hotspot
+- used aarch64-port-jdk8u-aarch64-jdk8u102-b14.tar.xz as new sources
+- used aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u102-b14.tar.xz as new sources for hotspot
+- removed upstreamed patches 519, 520 and 605
+- updated to systemtap 3, removed related patches 300 and 301
+- jjs provides moved to headless
+
 * Mon Aug 01 2016 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.101-3.b14
 - Replace patch for S8162384 with upstream version. Document correctly along with SystemTap RH1204159 patch.
 - Resolves: rhbz#1358661
@@ -1885,6 +1884,9 @@ require "copy_jdk_configs.lua"
 - added 6260348-pr3066.patch, pr3083-rh1346460.patch, 8159244-pr3074.patch, corba_typo_fix.patch
 renamed: jdk8-archivedJavadoc.patch -> 8154313.patch, pr2991-rh1341258.patch -> 8158260-pr2991-rh1341258.patch
 - not added 8147771-additional_hunk.patch, already in b14
+
+* Tue Jul 12 2016 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.92-5.b14
+- added Provides: /usr/bin/jjs
 
 * Tue Jun 21 2016 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.92-2.b14
 - family restricted by arch
