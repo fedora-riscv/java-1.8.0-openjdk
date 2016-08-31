@@ -220,6 +220,13 @@
 # not-duplicated scriplets for normal/debug packages
 %global update_desktop_icons /usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 
+%global check_sum_presented_in_spec() %{expand:
+md5sum %1
+currentMd5sum=`md5sum %1 | sed "s;\\s.*;;"`
+specfile=%{_specdir}/%{name}.spec
+grep -e md5sum -A 20 $specfile  | grep $currentMd5sum
+}
+
 %global post_script() %{expand:
 update-desktop-database %{_datadir}/applications &> /dev/null || :
 /bin/touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
@@ -246,7 +253,8 @@ if [ "$1" -gt 1 ]; then
        "${sum}" = '5463aef7dbf0bbcfe79e0336a7f92701' -o \\
        "${sum}" = '400cc64d4dd31f36dc0cc2c701d603db' -o \\
        "${sum}" = '321342219bb130d238ff144b9e5dbfc1' -o \\
-       "${sum}" = '134a37a84983b620f4d8d51a550c0c38' ]; then
+       "${sum}" = '134a37a84983b620f4d8d51a550c0c38' -o \\
+       "${sum}" = '5ea976e209d0d0b5b6ab148416123e02' ]; then
     if [ -f "${javasecurity}.rpmnew" ]; then
       mv -f "${javasecurity}.rpmnew" "${javasecurity}"
     fi
@@ -786,7 +794,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 1.%{buildver}%{?dist}
+Release: 2.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -1293,6 +1301,7 @@ for suffix in %{build_loop} ; do
 %endif
     sed -i -e s:@ABS_JAVA_HOME_DIR@:%{_jvmdir}/%{sdkdir $suffix}:g $OUTPUT_FILE
     sed -i -e s:@INSTALL_ARCH_DIR@:%{archinstall}:g $OUTPUT_FILE
+    sed -i -e s:@prefix@:%{_jvmdir}/%{sdkdir $suffix}/:g $OUTPUT_FILE
   done
 done
 # systemtap tapsets ends
@@ -1310,6 +1319,10 @@ for file in %{SOURCE9} %{SOURCE10} ; do
     sed -i -e  s:#ARCH#:%{version}-%{release}.%{_arch}$suffix:g $OUTPUT_FILE
 done
 done
+
+# this is check which controls, that latest java.security is included in post(_headless)
+%{check_sum_presented_in_spec openjdk/jdk/src/share/lib/security/java.security-linux}
+
 
 %build
 # How many cpu's do we have?
@@ -1425,6 +1438,9 @@ done
 for suffix in %{rev_build_loop} ; do
 
 export JAVA_HOME=$(pwd)/%{buildoutputdir $suffix}/images/%{j2sdkimage}
+
+# check java.security in this build is also in this specfile
+%{check_sum_presented_in_spec $JAVA_HOME/jre/lib/security/java.security}
 
 # Check unlimited policy has been used
 $JAVA_HOME/bin/javac -d . %{SOURCE13}
@@ -1856,6 +1872,11 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Thu Aug 31 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.102-2.b14
+- declared check_sum_presented_in_spec and used in prep and check
+- it is checking that latest packed java.security is mentioned in listing
+- fixed tapset
+
 * Thu Aug 25 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.102-1.b14
 - updated to aarch64-jdk8u102-b14 (from aarch64-port/jdk8u)
 - updated to aarch64-shenandoah-jdk8u102-b14 (from aarch64-port/jdk8u-shenandoah) of hotspot
