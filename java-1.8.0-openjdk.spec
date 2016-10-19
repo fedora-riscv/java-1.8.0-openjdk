@@ -170,7 +170,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global project         aarch64-port
 %global repo            jdk8u
-%global revision        aarch64-jdk8u102-b14
+%global revision        aarch64-jdk8u111-b16
 # eg # jdk8u60-b27 -> jdk8u60 or # aarch64-jdk8u60-b27 -> aarch64-jdk8u60  (dont forget spec escape % by %%)
 %global whole_update    %(VERSION=%{revision}; echo ${VERSION%%-*})
 # eg  jdk8u60 -> 60 or aarch64-jdk8u60 -> 60
@@ -794,7 +794,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 3.%{buildver}%{?dist}
+Release: 1.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -850,7 +850,7 @@ Source20: repackReproduciblePolycies.sh
 Source100: config.guess
 Source101: config.sub
 # shenandoah hotpost
-Source999: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u102-b14.tar.xz
+Source999: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u111-b16.tar.xz
 
 # RPM/distribution specific patches
 
@@ -1875,6 +1875,12 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Wed Oct 19 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.111-1.b16
+- updated to aarch64-jdk8u111-b16 (from aarch64-port/jdk8u)
+- updated to aarch64-shenandoah-jdk8u111-b16 (from aarch64-port/jdk8u-shenandoah) of hotspot
+- used aarch64-port-jdk8u-aarch64-jdk8u111-b16.tar.xz as new sources
+- used aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u111-b16.tar.xz as new sources for hotspot
+
 * Wed Oct 5 2016  Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.102-3.b14
 - debug subpackages allowed on aarch64 and ppc64le
 - fontconfig and nss restricted by isa
