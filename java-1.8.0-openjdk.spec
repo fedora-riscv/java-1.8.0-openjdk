@@ -27,8 +27,8 @@
 %global multilib_arches %{power64} sparc64 x86_64
 %global jit_arches      %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64}
 
-# by default we build debug build during main build only on intel arches
-%ifarch %{ix86} x86_64 %{aarch64} %{ppc64le}
+# By default, we build a debug build during main build on JIT architectures
+%ifarch %{jit_arches}
 %global include_debug_build 1
 %else
 %global include_debug_build 0
@@ -254,7 +254,8 @@ if [ "$1" -gt 1 ]; then
        "${sum}" = '400cc64d4dd31f36dc0cc2c701d603db' -o \\
        "${sum}" = '321342219bb130d238ff144b9e5dbfc1' -o \\
        "${sum}" = '134a37a84983b620f4d8d51a550c0c38' -o \\
-       "${sum}" = '5ea976e209d0d0b5b6ab148416123e02' ]; then
+       "${sum}" = '5ea976e209d0d0b5b6ab148416123e02' -o \\
+       "${sum}" = '5ab4c77cf14fbd7f7ee6f51a7a73d88c' ]; then
     if [ -f "${javasecurity}.rpmnew" ]; then
       mv -f "${javasecurity}.rpmnew" "${javasecurity}"
     fi
@@ -919,8 +920,6 @@ Patch507: pr2842-02.patch
 Patch400: 8154313.patch
 # S6260348, PR3066: GTK+ L&F JTextComponent not respecting desktop caret blink rate
 Patch526: 6260348-pr3066.patch
-# S8157306, PR3121, RH1360863: Random infrequent null pointer exceptions in javac
-Patch531: 8157306-pr3121-rh1360863.patch
 # S8162384, PR3122, RH1358661: Performance regression: bimorphic inlining may be bypassed by type speculation
 Patch532: 8162384-pr3122-rh1358661.patch
 
@@ -945,8 +944,10 @@ Patch201: system-libjpeg.patch
 # Local fixes
 # PR1834, RH1022017: Reduce curves reported by SSL to those in NSS
 Patch525: pr1834-rh1022017.patch
-# Temporary fix for typo in CORBA security patch
-Patch529: corba_typo_fix.patch
+# RH1367357: lcms2: Out-of-bounds read in Type_MLU_Read()
+Patch533: rh1367357.patch
+# Turn on AssumeMP by default on RHEL systems
+Patch534: always_assumemp.patch
 
 # Non-OpenJDK fixes
 
@@ -1277,9 +1278,13 @@ sh %{SOURCE12}
 %patch526
 %patch527
 %patch528
-%patch529
-%patch531
 %patch532
+%patch533
+
+# RHEL-only patches
+%if 0%{?rhel}
+%patch534
+%endif
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1880,6 +1885,7 @@ require "copy_jdk_configs.lua"
 - updated to aarch64-shenandoah-jdk8u111-b16 (from aarch64-port/jdk8u-shenandoah) of hotspot
 - used aarch64-port-jdk8u-aarch64-jdk8u111-b16.tar.xz as new sources
 - used aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u111-b16.tar.xz as new sources for hotspot
+- adapted patches
 
 * Wed Oct 5 2016  Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.102-3.b14
 - debug subpackages allowed on aarch64 and ppc64le
