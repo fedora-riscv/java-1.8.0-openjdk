@@ -27,8 +27,8 @@
 %global multilib_arches %{power64} sparc64 x86_64
 %global jit_arches      %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64}
 
-# by default we build debug build during main build only on intel arches
-%ifarch %{ix86} x86_64 %{aarch64} %{ppc64le}
+# By default, we build a debug build during main build on JIT architectures
+%ifarch %{jit_arches}
 %global include_debug_build 1
 %else
 %global include_debug_build 0
@@ -170,7 +170,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global project         aarch64-port
 %global repo            jdk8u
-%global revision        aarch64-jdk8u102-b14
+%global revision        aarch64-jdk8u111-b16
 # eg # jdk8u60-b27 -> jdk8u60 or # aarch64-jdk8u60-b27 -> aarch64-jdk8u60  (dont forget spec escape % by %%)
 %global whole_update    %(VERSION=%{revision}; echo ${VERSION%%-*})
 # eg  jdk8u60 -> 60 or aarch64-jdk8u60 -> 60
@@ -254,7 +254,8 @@ if [ "$1" -gt 1 ]; then
        "${sum}" = '400cc64d4dd31f36dc0cc2c701d603db' -o \\
        "${sum}" = '321342219bb130d238ff144b9e5dbfc1' -o \\
        "${sum}" = '134a37a84983b620f4d8d51a550c0c38' -o \\
-       "${sum}" = '5ea976e209d0d0b5b6ab148416123e02' ]; then
+       "${sum}" = '5ea976e209d0d0b5b6ab148416123e02' -o \\
+       "${sum}" = '5ab4c77cf14fbd7f7ee6f51a7a73d88c' ]; then
     if [ -f "${javasecurity}.rpmnew" ]; then
       mv -f "${javasecurity}.rpmnew" "${javasecurity}"
     fi
@@ -528,9 +529,9 @@ exit 0
 
 %global files_jre_headless() %{expand:
 %defattr(-,root,root,-)
-%doc %{buildoutputdir %%1}/images/%{j2sdkimage}/jre/ASSEMBLY_EXCEPTION
-%doc %{buildoutputdir %%1}/images/%{j2sdkimage}/jre/LICENSE
-%doc %{buildoutputdir %%1}/images/%{j2sdkimage}/jre/THIRD_PARTY_README
+%license %{buildoutputdir %%1}/images/%{j2sdkimage}/jre/ASSEMBLY_EXCEPTION
+%license %{buildoutputdir %%1}/images/%{j2sdkimage}/jre/LICENSE
+%license %{buildoutputdir %%1}/images/%{j2sdkimage}/jre/THIRD_PARTY_README
 %dir %{_jvmdir}/%{sdkdir %%1}
 %{_jvmdir}/%{jrelnk %%1}
 %{_jvmjardir}/%{jrelnk %%1}
@@ -568,9 +569,9 @@ exit 0
 
 %global files_devel() %{expand:
 %defattr(-,root,root,-)
-%doc %{buildoutputdir %%1}/images/%{j2sdkimage}/ASSEMBLY_EXCEPTION
-%doc %{buildoutputdir %%1}/images/%{j2sdkimage}/LICENSE
-%doc %{buildoutputdir %%1}/images/%{j2sdkimage}/THIRD_PARTY_README
+%license %{buildoutputdir %%1}/images/%{j2sdkimage}/ASSEMBLY_EXCEPTION
+%license %{buildoutputdir %%1}/images/%{j2sdkimage}/LICENSE
+%license %{buildoutputdir %%1}/images/%{j2sdkimage}/THIRD_PARTY_README
 %dir %{_jvmdir}/%{sdkdir %%1}/bin
 %dir %{_jvmdir}/%{sdkdir %%1}/include
 %dir %{_jvmdir}/%{sdkdir %%1}/lib
@@ -619,7 +620,7 @@ exit 0
 
 %global files_demo() %{expand:
 %defattr(-,root,root,-)
-%doc %{buildoutputdir %%1}/images/%{j2sdkimage}/jre/LICENSE
+%license %{buildoutputdir %%1}/images/%{j2sdkimage}/jre/LICENSE
 }
 
 %global files_src() %{expand:
@@ -631,13 +632,13 @@ exit 0
 %global files_javadoc() %{expand:
 %defattr(-,root,root,-)
 %doc %{_javadocdir}/%{uniquejavadocdir %%1}
-%doc %{buildoutputdir %%1}/images/%{j2sdkimage}/jre/LICENSE
+%license %{buildoutputdir %%1}/images/%{j2sdkimage}/jre/LICENSE
 }
 
 %global files_javadoc_zip() %{expand:
 %defattr(-,root,root,-)
 %doc %{_javadocdir}/%{uniquejavadocdir %%1}.zip
-%doc %{buildoutputdir %%1}/images/%{j2sdkimage}/jre/LICENSE
+%license %{buildoutputdir %%1}/images/%{j2sdkimage}/jre/LICENSE
 }
 
 %global files_accessibility() %{expand:
@@ -794,7 +795,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 3.%{buildver}%{?dist}
+Release: 1.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -850,7 +851,7 @@ Source20: repackReproduciblePolycies.sh
 Source100: config.guess
 Source101: config.sub
 # shenandoah hotpost
-Source999: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u102-b14.tar.xz
+Source999: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u111-b16.tar.xz
 
 # RPM/distribution specific patches
 
@@ -919,8 +920,6 @@ Patch507: pr2842-02.patch
 Patch400: 8154313.patch
 # S6260348, PR3066: GTK+ L&F JTextComponent not respecting desktop caret blink rate
 Patch526: 6260348-pr3066.patch
-# S8157306, PR3121, RH1360863: Random infrequent null pointer exceptions in javac
-Patch531: 8157306-pr3121-rh1360863.patch
 # S8162384, PR3122, RH1358661: Performance regression: bimorphic inlining may be bypassed by type speculation
 Patch532: 8162384-pr3122-rh1358661.patch
 
@@ -945,8 +944,10 @@ Patch201: system-libjpeg.patch
 # Local fixes
 # PR1834, RH1022017: Reduce curves reported by SSL to those in NSS
 Patch525: pr1834-rh1022017.patch
-# Temporary fix for typo in CORBA security patch
-Patch529: corba_typo_fix.patch
+# RH1367357: lcms2: Out-of-bounds read in Type_MLU_Read()
+Patch533: rh1367357.patch
+# Turn on AssumeMP by default on RHEL systems
+Patch534: always_assumemp.patch
 
 # Non-OpenJDK fixes
 
@@ -1277,9 +1278,13 @@ sh %{SOURCE12}
 %patch526
 %patch527
 %patch528
-%patch529
-%patch531
 %patch532
+%patch533
+
+# RHEL-only patches
+%if 0%{?rhel}
+%patch534
+%endif
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1872,6 +1877,13 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Wed Oct 19 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.111-1.b16
+- updated to aarch64-jdk8u111-b16 (from aarch64-port/jdk8u)
+- updated to aarch64-shenandoah-jdk8u111-b16 (from aarch64-port/jdk8u-shenandoah) of hotspot
+- used aarch64-port-jdk8u-aarch64-jdk8u111-b16.tar.xz as new sources
+- used aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u111-b16.tar.xz as new sources for hotspot
+- adapted patches
+
 * Wed Oct 5 2016  Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.102-3.b14
 - debug subpackages allowed on aarch64 and ppc64le
 - fontconfig and nss restricted by isa
