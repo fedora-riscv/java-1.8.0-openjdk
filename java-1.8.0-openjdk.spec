@@ -36,7 +36,7 @@
 
 # on intels, we build shenandoah htspot
 %ifarch x86_64
-%global use_shenandoah_hotspot 0
+%global use_shenandoah_hotspot 1
 %else
 %global use_shenandoah_hotspot 0
 %endif
@@ -255,6 +255,7 @@ if [ "$1" -gt 1 ]; then
        "${sum}" = '321342219bb130d238ff144b9e5dbfc1' -o \\
        "${sum}" = '134a37a84983b620f4d8d51a550c0c38' -o \\
        "${sum}" = '5ea976e209d0d0b5b6ab148416123e02' -o \\
+       "${sum}" = '059d61cfbb47e337b011ecda9350db9b' -o \\
        "${sum}" = '5ab4c77cf14fbd7f7ee6f51a7a73d88c' ]; then
     if [ -f "${javasecurity}.rpmnew" ]; then
       mv -f "${javasecurity}.rpmnew" "${javasecurity}"
@@ -795,7 +796,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 1.%{buildver}%{?dist}
+Release: 3.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -940,6 +941,11 @@ Patch524: 8158260-pr2991-rh1341258.patch
 # Patches ineligible for 8u
 # 8043805: Allow using a system-installed libjpeg
 Patch201: system-libjpeg.patch
+# Pathces 204-206 are serving for better check of debug symbols in native liraries
+Patch204: hotspot-remove-debuglink.patch
+Patch205: dont-add-unnecessary-debug-links.patch
+Patch206: hotspot-assembler-debuginfo.patch
+Patch207: PR3183.patch
 
 # Local fixes
 # PR1834, RH1022017: Reduce curves reported by SSL to those in NSS
@@ -957,10 +963,12 @@ BuildRequires: alsa-lib-devel
 BuildRequires: binutils
 BuildRequires: cups-devel
 BuildRequires: desktop-file-utils
+BuildRequires: elfutils
 BuildRequires: fontconfig
 BuildRequires: freetype-devel
 BuildRequires: giflib-devel
 BuildRequires: gcc-c++
+BuildRequires: gdb
 BuildRequires: gtk2-devel
 BuildRequires: lcms2-devel
 BuildRequires: libjpeg-devel
@@ -1235,6 +1243,10 @@ sh %{SOURCE12}
 %patch201
 %patch202
 %patch203
+%patch204
+%patch205
+%patch206
+%patch207
 
 %patch1
 %patch3
@@ -1456,18 +1468,61 @@ $JAVA_HOME/bin/javac -d . %{SOURCE14}
 $JAVA_HOME/bin/java $(echo $(basename %{SOURCE14})|sed "s|\.java||")
 
 # Check debug symbols are present and can identify code
-SERVER_JVM="$JAVA_HOME/jre/lib/%{archinstall}/server/libjvm.so"
-if [ -f "$SERVER_JVM" ] ; then
-  nm -aCl "$SERVER_JVM" | grep javaCalls.cpp
-fi
-CLIENT_JVM="$JAVA_HOME/jre/lib/%{archinstall}/client/libjvm.so"
-if [ -f "$CLIENT_JVM" ] ; then
-  nm -aCl "$CLIENT_JVM" | grep javaCalls.cpp
-fi
-ZERO_JVM="$JAVA_HOME/jre/lib/%{archinstall}/zero/libjvm.so"
-if [ -f "$ZERO_JVM" ] ; then
-  nm -aCl "$ZERO_JVM" | grep javaCalls.cpp
-fi
+find "$JAVA_HOME" -iname '*.so' -print0 | while read -d $'\0' lib
+do
+  if [ -f "$lib" ] ; then
+    echo "Testing $lib for debug symbols"
+    # All these tests rely on RPM failing the build if the exit code of any set
+    # of piped commands is non-zero.
+
+    # Test for .debug_* sections in the shared object. This is the  main test.
+    # Stripped objects will not contain these.
+    eu-readelf -S "$lib" | grep "] .debug_"
+    test $(eu-readelf -S "$lib" | egrep "\]\ .debug_(info|abbrev)" | wc --lines) == 2
+
+    # Test FILE symbols. These will most likely be removed by anyting that
+    # manipulates symbol tables because it's generally useless. So a nice test
+    # that nothing has messed with symbols.
+    old_IFS="$IFS"
+    IFS=$'\n'
+    for line in $(eu-readelf -s "$lib" | grep "00000000      0 FILE    LOCAL  DEFAULT")
+    do
+     # We expect to see .cpp files, except for architectures like aarch64 and
+     # s390 where we expect .o and .oS files
+      echo "$line" | egrep "ABS ((.*/)?[-_a-zA-Z0-9]+\.(c|cc|cpp|cxx|o|oS))?$"
+    done
+    IFS="$old_IFS"
+
+    # If this is the JVM, look for javaCalls.(cpp|o) in FILEs, for extra sanity checking.
+    if [ "`basename $lib`" = "libjvm.so" ]; then
+      eu-readelf -s "$lib" | \
+        egrep "00000000      0 FILE    LOCAL  DEFAULT      ABS javaCalls.(cpp|o)$"
+    fi
+
+    # Test that there are no .gnu_debuglink sections pointing to another
+    # debuginfo file. There shouldn't be any debuginfo files, so the link makes
+    # no sense either.
+    eu-readelf -S "$lib" | grep 'gnu'
+    if eu-readelf -S "$lib" | grep '] .gnu_debuglink' | grep PROGBITS; then
+      echo "bad .gnu_debuglink section."
+      eu-readelf -x .gnu_debuglink "$lib"
+      false
+    fi
+  fi
+done
+
+# Make sure gdb can do a backtrace based on line numbers on libjvm.so
+gdb -q "$JAVA_HOME/bin/java" <<EOF | tee gdb.out
+handle SIGSEGV pass nostop noprint
+set breakpoint pending on
+break javaCalls.cpp:1
+commands 1
+backtrace
+quit
+end
+run -version
+EOF
+grep 'JavaCallWrapper::JavaCallWrapper' gdb.out
 
 # Check src.zip has all sources. See RHBZ#1130490
 jar -tf $JAVA_HOME/src.zip | grep 'sun.misc.Unsafe'
@@ -1877,6 +1932,16 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Thu Nov 03 2016 jvanek <jvanek@redhat.com - 1:1.8.0.111-3.b16
+- added patch207 - PR3183.patch
+- java SSL/TLS implementation: should follow the policies of system-wide crypto policy 
+
+* Fri Oct 21 2016 Omair Majid <omajid@redhat.com> - 1:1.8.0.111-2.b16
+- added dont-add-unnecessary-debug-links.patch
+- added hotspot-assembler-debuginfo.patch
+- returned accidentally removed  hotspot-remove-debuglink.patch
+- eu-readelfs on libraries improved, added gdb call
+
 * Wed Oct 19 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.111-1.b16
 - updated to aarch64-jdk8u111-b16 (from aarch64-port/jdk8u)
 - updated to aarch64-shenandoah-jdk8u111-b16 (from aarch64-port/jdk8u-shenandoah) of hotspot
@@ -1936,12 +2001,27 @@ renamed: jdk8-archivedJavadoc.patch -> 8154313.patch, pr2991-rh1341258.patch -> 
 - httpsFix1329342.patch renamed to pr2934.patch
 - added known regresisonos fixes for u92 scheduled for next u (519-525)
 
-* Thu May 19 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.91-6.b14
+* Thu May 19 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.91-7.b14
 - added patch519, jdwpCrash.abrt.patch to fix trasnportation error
+
+* Fri May 13 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.91-6.b14
+- Enable weak reference discovery in ShenandoahMarkCompact. Otherwise we never process any weak references in full-gc. 
 
 * Tue May 03 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.91-5.b14
 - Restricted to depend on exactly same version of nss as used for build
 - Resolves: rhbz#1332456
+
+* Tue May 03 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.91-4.b14
+- updated to aarch64-shenandoah-jdk8u71-b15-beta02 (from aarch64-port/jdk8u-shenandoah) of hotspot
+- used aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u71-b15-beta02.tar.xz as new sources for hotspot
+- reverted  nss version fix
+
+* Mon Apr 25 2016 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.91-4.b14
+- Restricted to depend on exactly same version of nss as use dfor build
+- Resolves: rhbz#1332456
+
+* Mon Apr 25 2016 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.91-3.b14
+- included shenandoah support in 64b intel
 
 * Sun Apr 24 2016 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.91-2.b14
 - added patch518 httpsFix1329342.patch
@@ -2005,6 +2085,10 @@ renamed: jdk8-archivedJavadoc.patch -> 8154313.patch, pr2991-rh1341258.patch -> 
 - Update to u91b14.
 - Resolves: rhbz#1325423
 
+* Mon Apr 04 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.77-2.b03
+- added patch400  jdk8-archivedJavadoc.patch
+- added javadoc-zip(-debug) subpackage with compressed javadoc
+
 * Thu Mar 31 2016 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.77-3.b03
 - Fix typo in test invocation.
 - Resolves: rhbz#1245810
@@ -2043,61 +2127,110 @@ renamed: jdk8-archivedJavadoc.patch -> 8154313.patch, pr2991-rh1341258.patch -> 
 - Move completely unrelated AArch64 gcc 6 patch into separate file.
 - Resolves: rhbz#1019554 (fedora bug)
 
-* Tue Feb 23 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.72-6.b15
+* Tue Feb 23 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.72-10.b15
 - returning accidentlay removed hunk from renamed and so wrongly merged remove_aarch64_jvm.cfg_divergence.patch
 
-* Mon Feb 22 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.72-5.b15
-- sync from master
+* Mon Feb 22 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.72-9.b15
+- sync from rhel
+
+* Tue Feb 16 2016 Dan Horák <dan[at]danny.cz> - 1:1.8.0.72-8.b15
+- Refresh s390-java-opts patch
+
+* Tue Feb 16 2016 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.72-7.b15
+- Use -fno-lifetime-dse over -fno-guess-branch-probability.
+  See RHBZ#1306558.
+
+* Mon Feb 15 2016 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.72-6.b15
+- Add aarch64_FTBFS_rhbz_1307224.patch so as to resolve RHBZ#1307224.
+
+* Fri Feb 12 2016 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.72-5.b15
+- Add -fno-delete-null-pointer-checks -fno-guess-branch-probability flags to resolve x86/x86_64 crash.
+
+* Mon Feb 08 2016 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.72-5.b15
+- Explicitly set the C++ standard to use, as the default has changed to C++ 2014 in GCC 6.
+- Turn off -Werror due to format warnings in HotSpot and -std usage warnings in SCTP.
+- Run tests under the check stage and use the debug build first.
 
 * Fri Feb 05 2016 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.71-4.b15
 - Backport S8148351: Only display resolved symlink for compiler, do not change path
 
-* Wed Feb 03 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.72-2.b15
+* Wed Feb 03 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.72-3.b15
 * touch -t 201401010000 java.security to try to worakround md5sums
 
 * Wed Jan 27 2016 jvanek <jvanek@redhat.com> - 1:1.8.0.72-1.b15
 - updated to aarch64-jdk8u72-b15 (from aarch64-port/jdk8u)
 - used aarch64-port-jdk8u-aarch64-jdk8u72-b15.tar.xz as new sources
 - removed already upstreamed patch501 8146566.patch
-- removed forgotten pr2428.patch
 
 * Wed Jan 20 2016 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.71-1.b15
-- sync with rawhide
+- sync with rhel7
 - security update to CPU 19.1.2016 to u71b15
 
-* Mon Jan 04 2016 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-14.b17
-- partial sync with rawhide, the main part of lua script is included from dependence
+* Tue Dec 15 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-14.b17
+- pretrans moved back to lua nd now includes file from copy-jdk-configs instead of call it
 
 * Tue Dec 15 2015 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.65-13.b17
 - Disable hardened build on non-JIT arches.
   Workaround for RHBZ#1290936.
 
-* Mon Dec 14 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-5.b17
-- partial sync with rawhide
-- cleaned patches
-- adapted to global flags (hardened build)
-- fix build on many cores machines
-- reworked sources generating scripts
-- moved to single source usptream sources (integration forest)
-- temporarily excluded armv7hl (rhbz#1290936)
+* Thu Dec 10 2015 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.65-12.b17
+-removed patch4 java-1.8.0-openjdk-PStack-808293.patch
+-removed patch13 libjpeg-turbo-1.4-compat.patch
 
-* Fri Nov 27 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-4.b17
-- partial sync with rawhide
-- priority of debug subpackages lowered by one
-- policytool man page followed policytool to jre
-- adapted to --family switch from new alternatives
- - depends on chkconfig >= 1.7
-- removed soundfont dangling symlink and repalced by usptream patch
- - added patch605 soundFontPatch.patch
+* Thu Dec 10 2015 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.65-11.b17
+- Define our own optimisation flags based on the optflags macro and pass to OpenJDK build cflags/cxxflags.
+- Remove -fno-devirtualize as we are now on GCC 5 where the GCC bug it worked around is fixed.
+- Pass __global_ldflags to --with-extra-ldflags so Fedora linker flags are used in the build.
+- Also Pass ourcppflags to the OpenJDK build cflags as it wrongly uses them for the HotSpot C++ build.
+- Add PR2428, PR2462 & S8143855 patches to fix build issues that arise.
+- Resolves: rhbz#1283949
+- Resolves: rhbz#1120792
 
+* Thu Dec 10 2015 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.65-10.b17
+- Add patch to honour %%{_smp_ncpus_max} from Tuomo Soini
+- Resolves: rhbz#1152896
 
-* Mon Oct 19 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-3.b17
-- moved to bundled lcms
-- October 2015 security update to u65b17.
-- Add script for generating OpenJDK tarballs from a local Mercurial tree.
-- Update RH1191652 patch to build against current AArch64 tree.
-- Use appropriate source ID to avoid unpacking both tarballs on AArch64.
-- Add MD5 checksums for java.security from 8u51 and 8u60 RPMs.
+* Wed Dec 09 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-9.b17
+- extracted lua scripts moved from pre where they don't work to pretrans
+- requirement on copy-jdk-configs made Week.
+
+* Tue Dec 08 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-8.b17
+- used extracted lua scripts.
+- now depnding on copy-jdk-configs
+- config files persisting in pre instead of %pretrans
+
+* Tue Dec 08 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-7.b17
+- changed way of generating the sources. As result:
+- "updated" to aarch64-jdk8u65-b17 (from aarch64-port/jdk8u60)
+- used aarch64-port-jdk8u60-aarch64-jdk8u65-b17.tar.xz as new sources
+
+* Fri Nov 27 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-5.b17
+- added missing md5sums
+- moved to bundeld lcms
+
+* Wed Nov 25 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-4.b17
+- debug packages priority lowered by 1
+
+* Wed Nov 25 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-3.b17
+- depends on chkconfig >1.7 - added --family support
+
+* Fri Nov 13 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-2.b17
+- added and applied patch605 soundFontPatch.patch as repalcement for removed sound font links
+- removed hardcoded soundfont links
+
+* Thu Nov 12 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-1.b17
+- updated to u65b17
+
+* Mon Nov 09 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.60-17.b28
+- policytool  manpage followed the binary from devel to jre
+
+* Mon Nov 02 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.60-16.b28
+added and applied patch604: aarch64-ifdefbugfix.patch to fix rhbz1276959
+
+* Thu Oct 15 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.60-15.b28
+- moved to single source integration forest
+- removed patch patch9999 enableArm64.patch
+- removed patch patch600  %%{name}-rh1191652-hotspot.patch
 
 * Thu Aug 27 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.60-14.b24
 - updated aarch64 tarball to contain whole forest of latest jdk8-aarch64-jdk8u60-b24.2.tar.xz
