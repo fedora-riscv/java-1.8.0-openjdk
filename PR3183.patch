@@ -98,7 +98,7 @@ diff -r 3d53f19b4838 -r 1c4d5cb2096a src/share/lib/security/java.security-linux
 +# using the system properties file stored at
 +# /etc/crypto-policies/back-ends/java.config
 +#
-+security.useSystemPropertiesFile=true
++security.useSystemPropertiesFile=false
 +
 +#
  # Determines the default key and trust manager factory algorithms for
