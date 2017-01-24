@@ -256,6 +256,7 @@ if [ "$1" -gt 1 ]; then
        "${sum}" = '134a37a84983b620f4d8d51a550c0c38' -o \\
        "${sum}" = '5ea976e209d0d0b5b6ab148416123e02' -o \\
        "${sum}" = '059d61cfbb47e337b011ecda9350db9b' -o \\
+       "${sum}" = '8f51679f53b285216a65a09a3a1a6010' -o \\
        "${sum}" = '0dd41ddb4d1fb25975f7faab2c23e151' -o \\
        "${sum}" = '59dafb237e5def3ccf8a3ad589fb2777' -o \\
        "${sum}" = '84d16306cd4c2ae76ba81a3775e92cee' -o \\
@@ -801,7 +802,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 1.%{buildver}%{?dist}
+Release: 2.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -945,6 +946,8 @@ Patch525: pr1834-rh1022017.patch
 Patch533: rh1367357.patch
 # Turn on AssumeMP by default on RHEL systems
 Patch534: always_assumemp.patch
+# temporary patch. See https://bugzilla.redhat.com/show_bug.cgi?id=1415137#c17
+Patch535: excludeECDHE-1415137.patch
 
 # Non-OpenJDK fixes
 
@@ -1283,6 +1286,8 @@ sh %{SOURCE12}
 %if 0%{?rhel}
 %patch534
 %endif
+
+%patch535
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1921,6 +1926,9 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Tue Jan 24 2017 jvanek <jvanek@redhat.com> - 1:1.8.0.121-2.b14
+- added patch535, excludeECDHE-1415137.patch to tmp-worakround crash with nss
+
 * Tue Jan 24 2017 jvanek <jvanek@redhat.com> - 1:1.8.0.121-1.b14
 - updated to aarch64-jdk8u121-b14 (from openjdk8-forests/latest-aarch64)
 - updated to aarch64-shenandoah-jdk8u121-b14 (from openjdk8-forests/latest-shenandoah) of hotspot
