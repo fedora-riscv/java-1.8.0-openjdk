@@ -220,12 +220,6 @@
 # not-duplicated scriplets for normal/debug packages
 %global update_desktop_icons /usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 
-%global check_sum_presented_in_spec() %{expand:
-md5sum %1
-currentMd5sum=`md5sum %1 | sed "s;\\s.*;;"`
-specfile=%{_specdir}/%{name}.spec
-grep -e md5sum -A 20 $specfile  | grep $currentMd5sum
-}
 
 %global post_script() %{expand:
 update-desktop-database %{_datadir}/applications &> /dev/null || :
@@ -235,39 +229,6 @@ exit 0
 
 
 %global post_headless() %{expand:
-# FIXME: identical binaries are copied, not linked. This needs to be
-# fixed upstream.
-# The pretrans lua scriptlet prevents an unmodified java.security
-# from being replaced via an update. It gets created as
-# java.security.rpmnew instead. This invalidates the patch of
-# JDK-8061210 of the January 2015 CPU, JDK-8043201 of the
-# July 2015 CPU and JDK-8141287 of the January 2016 CPU. We
-# fix this via a post scriptlet which runs on updates.
-if [ "$1" -gt 1 ]; then
-  javasecurity="%{_jvmdir}/%{uniquesuffix}/jre/lib/security/java.security"
-  sum=$(md5sum "${javasecurity}" | cut -d' ' -f1)
-  # This is the md5sum of an unmodified java.security file
-  if [ "${sum}" = '1690ac33955594f71dc952c9e83fd396' -o \\
-       "${sum}" = 'b138695d0c0ea947e64a21a627d973ba' -o \\
-       "${sum}" = 'd17958676bdb9f9d941c8a59655311fb' -o \\
-       "${sum}" = '5463aef7dbf0bbcfe79e0336a7f92701' -o \\
-       "${sum}" = '400cc64d4dd31f36dc0cc2c701d603db' -o \\
-       "${sum}" = '321342219bb130d238ff144b9e5dbfc1' -o \\
-       "${sum}" = '134a37a84983b620f4d8d51a550c0c38' -o \\
-       "${sum}" = '5ea976e209d0d0b5b6ab148416123e02' -o \\
-       "${sum}" = '059d61cfbb47e337b011ecda9350db9b' -o \\
-       "${sum}" = '0dd41ddb4d1fb25975f7faab2c23e151' -o \\
-       "${sum}" = '59dafb237e5def3ccf8a3ad589fb2777' -o \\
-       "${sum}" = '84d16306cd4c2ae76ba81a3775e92cee' -o \\
-       "${sum}" = '5ab4c77cf14fbd7f7ee6f51a7a73d88c' -o \\
-       "${sum}" = 'b727442b4ac0e3b8a26ec9741ad463e5' -o \\
-       "${sum}" = 'a59c6d96aeae1303fb8ba85e97588e9d' ]; then
-    if [ -f "${javasecurity}.rpmnew" ]; then
-      mv -f "${javasecurity}.rpmnew" "${javasecurity}"
-    fi
-  fi
-fi
-
 %ifarch %{jit_arches}
 # MetaspaceShared::generate_vtable_methods not implemented for PPC JIT
 %ifnarch %{power64}
@@ -332,6 +293,15 @@ update-alternatives --install %{_jvmdir}/jre-%{javaver}-%{origin} jre_%{javaver}
 
 update-desktop-database %{_datadir}/applications &> /dev/null || :
 /bin/touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
+
+# see pretrans where this file is declared
+# also see that pretrans is only for nondebug
+if [ ! "%1" == %{debug_suffix} ]; then
+  if [ -f %{_libexecdir}/copy_jdk_configs_fixFiles.sh ] ; then
+    sh  %{_libexecdir}/copy_jdk_configs_fixFiles.sh %{rpm_state_dir}/%{name}.%{_arch}  %{_jvmdir}/%{sdkdir %%1}
+  fi
+fi
+
 exit 0
 }
 
@@ -692,7 +662,7 @@ Requires: lksctp-tools%{?_isa}
 Requires: nss%{?_isa} %{NSS_BUILDTIME_VERSION}
 Requires: nss-softokn%{?_isa} %{NSSSOFTOKN_BUILDTIME_VERSION}
 # tool to copy jdk's configs - should be Recommends only, but then only dnf/yum eforce it, not rpm transaction and so no configs are persisted when pure rpm -u is run. I t may be consiedered as regression
-Requires:	copy-jdk-configs >= 1.1-3
+Requires:	copy-jdk-configs >= 2.2
 OrderWithRequires: copy-jdk-configs
 # Post requires alternatives to install tool alternatives.
 Requires(post):   %{_sbindir}/alternatives
@@ -801,7 +771,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 5.%{buildver}%{?dist}
+Release: 7.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -1337,9 +1307,6 @@ for file in %{SOURCE9} %{SOURCE10} ; do
 done
 done
 
-# this is check which controls, that latest java.security is included in post(_headless)
-%{check_sum_presented_in_spec openjdk/jdk/src/share/lib/security/java.security-linux}
-
 
 %build
 # How many cpu's do we have?
@@ -1458,9 +1425,6 @@ done
 for suffix in %{rev_build_loop} ; do
 
 export JAVA_HOME=$(pwd)/%{buildoutputdir $suffix}/images/%{j2sdkimage}
-
-# check java.security in this build is also in this specfile
-%{check_sum_presented_in_spec $JAVA_HOME/jre/lib/security/java.security}
 
 # Check unlimited policy has been used
 $JAVA_HOME/bin/javac -d . %{SOURCE13}
@@ -1796,7 +1760,7 @@ else
   end
 end
 -- run contetn of included file with fake args
-arg = {"--currentjvm", "%{uniquesuffix %{nil}}", "--jvmdir", "%{_jvmdir %{nil}}", "--origname", "%{name}", "--origjavaver", "%{javaver}", "--arch", "%{_arch}"}
+arg = {"--currentjvm", "%{uniquesuffix %{nil}}", "--jvmdir", "%{_jvmdir %{nil}}", "--origname", "%{name}", "--origjavaver", "%{javaver}", "--arch", "%{_arch}", "--temp", "%{rpm_state_dir}/%{name}.%{_arch}"}
 require "copy_jdk_configs.lua"
 
 %post 
@@ -1936,6 +1900,12 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Tue Feb 21 2017 jvanek <jvanek@redhat.com> - 1:1.8.0.121-7.b14
+- fixed the config(noreplace) issue with various left files lke java.security (rhbz#1183793)
+- by calling new c-j-c hooks
+- removed self-tail-bitting check check_sum_presented_in_spec
+- release 6+7 to verify update path
+
 * Mon Feb 20 2017 jvanek <jvanek@redhat.com> - 1:1.8.0.121-5.b14
 - patch 536 reordered to 537
 - added patch 536 - Backport "8170888: [linux] Experimental support for cgroup memory limits in container (ie Docker) environments"
