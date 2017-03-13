@@ -827,7 +827,7 @@ Source100: config.guess
 Source101: config.sub
 
 # Shenandoah HotSpot
-Source999: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u121-b14-shenandoah-merge-2017-02-20.tar.xz
+Source999: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u121-b14-shenandoah-merge-2017-03-09.tar.xz
 
 # RPM/distribution specific patches
 
