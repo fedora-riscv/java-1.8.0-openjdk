@@ -793,7 +793,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 1.%{buildver}%{?dist}
+Release: 2.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -950,6 +950,7 @@ Patch537: 8174164-pr3334-rh1417266.patch
 Patch548: 8174729-pr3336-rh1420518.patch
 # 8175097, PR3334, RH1417266: [TESTBUG] 8174164 fix missed the test
 Patch549: 8175097-pr3334-rh1417266.patch
+Patch550: 8175813-rh1448880.patch
 
 # Patches ineligible for 8u
 # 8043805: Allow using a system-installed libjpeg
@@ -1316,6 +1317,7 @@ sh %{SOURCE12}
 %patch547
 %patch548
 %patch549
+%patch550
 
 # RPM-only fixes
 %patch525
@@ -1958,6 +1960,10 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Fri May 19 2017 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.131-2.b12
+- added and aplied patch550 8175813-rh1448880.patch
+- Resolves: rhbz#1448880
+
 * Thu Apr 20 2017 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.131-1.b12
 - updated to aarch64-jdk8u131-b12 (from aarch64-port/jdk8u)
 - updated to aarch64-shenandoah-jdk8u131-b12-shenandoah-merge-2017-04-20 (from aarch64-port/jdk8u-shenandoah) of hotspot
