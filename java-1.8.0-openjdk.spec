@@ -172,6 +172,26 @@
 %global with_systemtap 0
 %endif
 
+%ifarch %{ix86} x86_64
+%global with_openjfx_binding 1
+%global openjfx_path %{_jvmdir}/openjfx
+# links src directories
+%global jfx_jre_libs_dir %{openjfx_path}/rt/lib
+%global jfx_jre_native_dir %{jfx_jre_libs_dir}/%{archinstall}
+%global jfx_sdk_libs_dir %{openjfx_path}/lib
+%global jfx_sdk_bins_dir %{openjfx_path}/bin
+%global jfx_jre_exts_dir %{jfx_sdk_libs_dir}/ext
+# links src files
+# maybe depend on jfx and generate the lists in build time? Yes, bad idea to inlcude cyclic depndenci, but this list is aweful
+%global jfx_jre_libs jfxswt.jar javafx.properties
+%global jfx_jre_native libprism_es2.so libprism_common.so libjavafx_font.so libdecora_sse.so libjavafx_font_freetype.so libprism_sw.so libjavafx_font_pango.so ibglass.so libjavafx_iio.so
+%global jfx_sdk_libs javafx-mx.jar packager.jar ant-javafx.jar
+%global jfx_sdk_bins javafxpackager javapackager
+%global jfx_jre_exts jfxrt.jar
+%else
+%global with_openjfx_binding 0
+%endif
+
 # Convert an absolute path to a relative path.  Each symbolic link is
 # specified relative to the directory in which it is installed so that
 # it will resolve properly within chrooted installations.
@@ -528,6 +548,7 @@ exit 0
 %{_jvmprivdir}/*
 %{jvmjardir %%1}
 %dir %{_jvmdir}/%{jredir %%1}/lib/security
+%{_jvmdir}/%{jredir %%1}/lib/security/cacerts
 %config(noreplace) %{_jvmdir}/%{jredir %%1}/lib/security/US_export_policy.jar
 %config(noreplace) %{_jvmdir}/%{jredir %%1}/lib/security/local_policy.jar
 %config(noreplace) %{_jvmdir}/%{jredir %%1}/lib/security/java.policy
@@ -793,7 +814,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 2.%{buildver}%{?dist}
+Release: 3.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -817,6 +838,9 @@ URL:      http://openjdk.java.net/
 # REPO_ROOT=<path to checked-out repository> generate_source_tarball.sh
 # where the source is obtained from http://hg.openjdk.java.net/%%{project}/%%{repo}
 Source0: %{project}-%{repo}-%{revision}.tar.xz
+
+# Shenandoah HotSpot
+Source1: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u131-b12-shenandoah-merge-2017-04-20.tar.xz
 
 # Custom README for -src subpackage
 Source2:  README.src
@@ -848,9 +872,6 @@ Source20: repackReproduciblePolycies.sh
 # New versions of config files with aarch64 support. This is not upstream yet.
 Source100: config.guess
 Source101: config.sub
-
-# Shenandoah HotSpot
-Source999: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u131-b12-shenandoah-merge-2017-04-20.tar.xz
 
 # RPM/distribution specific patches
 
@@ -926,6 +947,10 @@ Patch400: 8154313.patch
 Patch526: 6260348-pr3066.patch
 # 8061305, PR3335, RH1423421: Javadoc crashes when method name ends with "Property"
 Patch538: 8061305-pr3335-rh1423421.patch
+# 8175813, PR3394, RH1448880: PPC64: "mbind: Invalid argument" when -XX:+UseNUMA is used
+Patch550: 8175813-pr3394-rh1448880.patch
+# 8181055, PR3394, RH1448880: PPC64: "mbind: Invalid argument" still seen after 8175813
+Patch551: 8181055-pr3394-rh1448880.patch
 
 # Patches upstream and appearing in 8u131
 # 6515172, PR3346: Runtime.availableProcessors() ignores Linux taskset command
@@ -950,7 +975,6 @@ Patch537: 8174164-pr3334-rh1417266.patch
 Patch548: 8174729-pr3336-rh1420518.patch
 # 8175097, PR3334, RH1417266: [TESTBUG] 8174164 fix missed the test
 Patch549: 8175097-pr3334-rh1417266.patch
-Patch550: 8175813-rh1448880.patch
 
 # Patches ineligible for 8u
 # 8043805: Allow using a system-installed libjpeg
@@ -969,6 +993,7 @@ Patch534: always_assumemp.patch
 Patch539: pr2888.patch
 
 # Non-OpenJDK fixes
+Patch1000: enableCommentedOutSystemNss.patch
 
 BuildRequires: autoconf
 BuildRequires: automake
@@ -1207,6 +1232,39 @@ Summary: OpenJDK accessibility connector %{for_debug}
 See normal java-%{version}-openjdk-accessibility description.
 %endif
 
+
+%if %{with_openjfx_binding}
+%package openjfx
+Summary: OpenJDK x OpenJFX connector. This package adds symliks finishing Java FX integration to %{name}
+Requires: %{name}%{?_isa} = %{epoch}:%{version}-%{release}
+Requires: openjfx%{?_isa}
+%description openjfx
+Set of links from OpenJDK (jre) to OpenJFX
+
+%package openjfx-devel
+Summary: OpenJDK x OpenJFX connector for FX developers. This package adds symliks finishing Java FX integration to %{name}-devel
+Requires: %{name}-devel%{?_isa} = %{epoch}:%{version}-%{release}
+Requires: openjfx-devel
+%description openjfx-devel
+Set of links from OpenJDK (sdk) to OpenJFX
+
+%if %{include_debug_build}
+%package openjfx-debug
+Summary: OpenJDK x OpenJFX connector %{for_debug}. his package adds symliks finishing Java FX integration to %{name}-debug
+Requires: %{name}-debug%{?_isa} = %{epoch}:%{version}-%{release}
+Requires: openjfx%{?_isa}
+%description openjfx-debug
+Set of links from OpenJDK-debug (jre) to normal OpenJFX. OpenJFX do not support debug buuilds of itself
+
+%package openjfx-devel-debug
+Summary: OpenJDK x OpenJFX connector for FX developers %{for_debug}. This package adds symliks finishing Java FX integration to %{name}-devel-debug
+Requires: %{name}-devel-debug%{?_isa} = %{epoch}:%{version}-%{release}
+Requires: openjfx-devel
+%description openjfx-devel-debug
+Set of links from OpenJDK-debug (sdk) to normal OpenJFX. OpenJFX do not support debug buuilds of itself
+%endif
+%endif
+
 %prep
 if [ %{include_normal_build} -eq 0 -o  %{include_normal_build} -eq 1 ] ; then
   echo "include_normal_build is %{include_normal_build}"
@@ -1237,7 +1295,7 @@ ln -s openjdk jdk8
 # On Shenandoah-supported architectures, replace HotSpot with
 # the Shenandoah version
 pushd openjdk
-tar -xf %{SOURCE999}
+tar -xf %{SOURCE1}
 rm -rf hotspot
 mv openjdk/hotspot .
 rm -rf openjdk
@@ -1318,6 +1376,7 @@ sh %{SOURCE12}
 %patch548
 %patch549
 %patch550
+%patch551
 
 # RPM-only fixes
 %patch525
@@ -1328,6 +1387,8 @@ sh %{SOURCE12}
 %if 0%{?rhel}
 %patch534
 %endif
+
+%patch1000
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1609,6 +1670,12 @@ mkdir -p $RPM_BUILD_ROOT%{_jvmdir}/%{jredir $suffix}/lib/%{archinstall}/client/
 
   # Remove empty cacerts database.
   rm -f $RPM_BUILD_ROOT%{_jvmdir}/%{jredir $suffix}/lib/security/cacerts
+  # Install cacerts symlink needed by some apps which hardcode the path.
+  pushd $RPM_BUILD_ROOT%{_jvmdir}/%{jredir $suffix}/lib/security
+    RELATIVE=$(%{abs2rel} %{_sysconfdir}/pki/java \
+      %{_jvmdir}/%{jredir $suffix}/lib/security)
+    ln -sf $RELATIVE/cacerts .
+  popd
 
   # Install extension symlinks.
   install -d -m 755 $RPM_BUILD_ROOT%{jvmjardir $suffix}
@@ -1773,6 +1840,44 @@ find $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir $suffix}/demo \
     echo "" >> accessibility.properties
   popd
 
+# intentionally after all else, fx links  with redirections on its own
+%if %{with_openjfx_binding}
+  FXSDK_FILES=%{name}-openjfx-devel.files"$suffix"
+  FXJRE_FILES=%{name}-openjfx.files"$suffix"
+  echo -n "" > $FXJRE_FILES
+  echo -n "" > $FXSDK_FILES
+  for file in  %{jfx_jre_libs} ; do
+    srcfile=%{jfx_jre_libs_dir}/$file
+    targetfile=%{_jvmdir}/%{jredir $suffix}/lib/$file
+    ln -s $srcfile $RPM_BUILD_ROOT/$targetfile
+    echo $targetfile >> $FXJRE_FILES
+  done
+  for file in  %{jfx_jre_native} ; do
+    srcfile=%{jfx_jre_native_dir}/$file
+    targetfile=%{_jvmdir}/%{jredir $suffix}/lib/%{archinstall}/$file
+    ln -s $srcfile $RPM_BUILD_ROOT/$targetfile
+    echo $targetfile >> $FXJRE_FILES
+  done
+  for file in  %{jfx_jre_exts} ; do
+    srcfile=%{jfx_jre_exts_dir}/$file
+    targetfile=%{_jvmdir}/%{jredir $suffix}/lib/ext/$file
+    ln -s $srcfile $RPM_BUILD_ROOT/$targetfile
+    echo $targetfile >> $FXJRE_FILES
+  done
+  for file in  %{jfx_sdk_libs} ; do
+    srcfile=%{jfx_sdk_libs_dir}/$file
+    targetfile=%{_jvmdir}/%{sdkdir $suffix}/lib/$file
+    ln -s $srcfile $RPM_BUILD_ROOT/$targetfile
+    echo $targetfile >> $FXSDK_FILES
+  done
+  for file in  %{jfx_sdk_bins} ; do
+    srcfile=%{jfx_sdk_bins_dir}/$file
+    targetfile=%{_jvmdir}/%{sdkdir $suffix}/bin/$file
+    ln -s $srcfile $RPM_BUILD_ROOT/$targetfile
+    echo $targetfile >> $FXSDK_FILES
+  done
+%endif
+
 bash %{SOURCE20} $RPM_BUILD_ROOT/%{_jvmdir}/%{jredir $suffix} %{javaver}
 # https://bugzilla.redhat.com/show_bug.cgi?id=1183793
 touch -t 201401010000 $RPM_BUILD_ROOT/%{_jvmdir}/%{jredir $suffix}/lib/security/java.security
@@ -1931,6 +2036,12 @@ require "copy_jdk_configs.lua"
 
 %files accessibility
 %{files_accessibility %{nil}}
+
+%if %{with_openjfx_binding}
+%files openjfx -f %{name}-openjfx.files
+
+%files openjfx-devel -f %{name}-openjfx-devel.files
+%endif
 %endif
 
 %if %{include_debug_build} 
@@ -1957,12 +2068,22 @@ require "copy_jdk_configs.lua"
 
 %files accessibility-debug
 %{files_accessibility %{debug_suffix_unquoted}}
+
+%if %{with_openjfx_binding}
+%files openjfx-debug -f %{name}-openjfx.files-debug
+
+%files openjfx-devel-debug -f %{name}-openjfx-devel.files-debug
+%endif
 %endif
 
 %changelog
-* Fri May 19 2017 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.131-2.b12
-- added and aplied patch550 8175813-rh1448880.patch
-- Resolves: rhbz#1448880
+* Tue Jun 06 2017 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.131-3.b12
+- source999 moved to source1
+- added two pathces 8181055-pr3394-rh1448880.patch and 8175813/PR3394/RH1448880
+- enabled (commented out) system NSS via patch1000, enableCommentedOutSystemNss.patch
+
+* Tue May 09 2017 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.131-1.b12
+- added javafx binding subpackages
 
 * Thu Apr 20 2017 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.131-1.b12
 - updated to aarch64-jdk8u131-b12 (from aarch64-port/jdk8u)
