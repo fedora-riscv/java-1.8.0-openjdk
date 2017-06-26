@@ -814,7 +814,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 5.%{buildver}%{?dist}
+Release: 7.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -1238,13 +1238,15 @@ See normal java-%{version}-openjdk-accessibility description.
 Summary: OpenJDK x OpenJFX connector. This package adds symliks finishing Java FX integration to %{name}
 Requires: %{name}%{?_isa} = %{epoch}:%{version}-%{release}
 Requires: openjfx%{?_isa}
+Provides: javafx  = %{epoch}:%{version}-%{release}
 %description openjfx
 Set of links from OpenJDK (jre) to OpenJFX
 
 %package openjfx-devel
 Summary: OpenJDK x OpenJFX connector for FX developers. This package adds symliks finishing Java FX integration to %{name}-devel
 Requires: %{name}-devel%{?_isa} = %{epoch}:%{version}-%{release}
-Requires: openjfx-devel
+Requires: openjfx-devel%{?_isa}
+Provides: javafx-devel = %{epoch}:%{version}-%{release}
 %description openjfx-devel
 Set of links from OpenJDK (sdk) to OpenJFX
 
@@ -1253,13 +1255,15 @@ Set of links from OpenJDK (sdk) to OpenJFX
 Summary: OpenJDK x OpenJFX connector %{for_debug}. his package adds symliks finishing Java FX integration to %{name}-debug
 Requires: %{name}-debug%{?_isa} = %{epoch}:%{version}-%{release}
 Requires: openjfx%{?_isa}
+Provides: javafx-debug = %{epoch}:%{version}-%{release}
 %description openjfx-debug
 Set of links from OpenJDK-debug (jre) to normal OpenJFX. OpenJFX do not support debug buuilds of itself
 
 %package openjfx-devel-debug
 Summary: OpenJDK x OpenJFX connector for FX developers %{for_debug}. This package adds symliks finishing Java FX integration to %{name}-devel-debug
 Requires: %{name}-devel-debug%{?_isa} = %{epoch}:%{version}-%{release}
-Requires: openjfx-devel
+Requires: openjfx-devel%{?_isa}
+Provides: javafx-devel-debug = %{epoch}:%{version}-%{release}
 %description openjfx-devel-debug
 Set of links from OpenJDK-debug (sdk) to normal OpenJFX. OpenJFX do not support debug buuilds of itself
 %endif
@@ -2077,6 +2081,12 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Sat Jun 17 2017 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.131-7.b12
+- adapted to no longer noarch openjfx-devel
+
+* Wed Jun 07 2017 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.131-6.b12
+- added virtualprovides for javafx
+
 * Wed Jun 07 2017 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.131-5.b12
 - fixed target of to fxrt.jar link
 - fixedname of libglass
