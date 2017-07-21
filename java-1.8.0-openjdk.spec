@@ -173,8 +173,7 @@
 %endif
 
 %ifarch %{ix86} x86_64
-#disabling jfx on f25for now
-%global with_openjfx_binding 0
+%global with_openjfx_binding 1
 %global openjfx_path %{_jvmdir}/openjfx
 # links src directories
 %global jfx_jre_libs_dir %{openjfx_path}/rt/lib
