@@ -557,6 +557,7 @@ exit 0
 %config(noreplace) %{_jvmdir}/%{jredir -- %{?1}}/lib/security/java.security
 %config(noreplace) %{_jvmdir}/%{jredir -- %{?1}}/lib/security/blacklisted.certs
 %config(noreplace) %{_jvmdir}/%{jredir -- %{?1}}/lib/logging.properties
+%config(noreplace) %{_jvmdir}/%{jredir -- %{?1}}/lib/calendars.properties
 %{_mandir}/man1/java-%{uniquesuffix -- %{?1}}.1*
 %{_mandir}/man1/jjs-%{uniquesuffix -- %{?1}}.1*
 %{_mandir}/man1/keytool-%{uniquesuffix -- %{?1}}.1*
@@ -577,6 +578,61 @@ exit 0
 %endif
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/server/
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/client/
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/jli/libjli.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/jvm.cfg
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libattach.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libawt.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libawt_headless.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libdt_socket.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libfontmanager.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libhprof.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libinstrument.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libj2gss.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libj2pcsc.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libj2pkcs11.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjaas_unix.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjava.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjava_crw_demo.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjavajpeg.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjdwp.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjsdt.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjsig.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjsound.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/liblcms.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libmanagement.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libmlib_image.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libnet.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libnio.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libnpt.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libsaproc.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libsctp.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libsunec.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libunpack.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libverify.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libzip.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/charsets.jar
+%{_jvmdir}/%{jredir -- %{?1}}/lib/classlist
+%{_jvmdir}/%{jredir -- %{?1}}/lib/content-types.properties
+%{_jvmdir}/%{jredir -- %{?1}}/lib/currency.data
+%{_jvmdir}/%{jredir -- %{?1}}/lib/flavormap.properties
+%{_jvmdir}/%{jredir -- %{?1}}/lib/hijrah-config-umalqura.properties
+%{_jvmdir}/%{jredir -- %{?1}}/lib/images/cursors/*
+%{_jvmdir}/%{jredir -- %{?1}}/lib/jce.jar
+%{_jvmdir}/%{jredir -- %{?1}}/lib/jexec
+%{_jvmdir}/%{jredir -- %{?1}}/lib/jsse.jar
+%{_jvmdir}/%{jredir -- %{?1}}/lib/jvm.hprof.txt
+%{_jvmdir}/%{jredir -- %{?1}}/lib/meta-index
+%{_jvmdir}/%{jredir -- %{?1}}/lib/net.properties
+%{_jvmdir}/%{jredir -- %{?1}}/lib/psfont.properties.ja
+%{_jvmdir}/%{jredir -- %{?1}}/lib/psfontj2d.properties
+%{_jvmdir}/%{jredir -- %{?1}}/lib/resources.jar
+%{_jvmdir}/%{jredir -- %{?1}}/lib/rt.jar
+%{_jvmdir}/%{jredir -- %{?1}}/lib/sound.properties
+%{_jvmdir}/%{jredir -- %{?1}}/lib/tzdb.dat
+%{_jvmdir}/%{jredir -- %{?1}}/lib/management-agent.jar
+%{_jvmdir}/%{jredir -- %{?1}}/lib/management/*
+%{_jvmdir}/%{jredir -- %{?1}}/lib/cmm/*
+%{_jvmdir}/%{jredir -- %{?1}}/lib/ext/*
 }
 
 %define files_devel() %{expand:
