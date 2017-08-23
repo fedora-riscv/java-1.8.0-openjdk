@@ -29,7 +29,7 @@
 
 # By default, we build a debug build during main build on JIT architectures
 %ifarch %{jit_arches}
-%global include_debug_build 0
+%global include_debug_build 1
 %else
 %global include_debug_build 0
 %endif
