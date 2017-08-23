@@ -1023,6 +1023,7 @@ Patch555: 8164293-pr3412-rh1459641.patch
 Patch201: system-libjpeg.patch
 # custom securities
 Patch207: PR3183.patch
+Patch208: aarch64BuildFailure.patch
 
 # Local fixes
 # PR1834, RH1022017: Reduce curves reported by SSL to those in NSS
@@ -1372,6 +1373,7 @@ sh %{SOURCE12}
 %patch205
 %patch206
 %patch207
+%patch208
 
 %patch1
 %patch3
