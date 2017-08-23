@@ -1,4 +1,4 @@
-+ *.rpm
+*.rpm
 /class-rewriter.tar.gz
 /desktop-files.tar.gz
 /jdk8-b79.tar.gz
