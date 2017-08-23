@@ -228,12 +228,12 @@
 %define uniquesuffix()        %{expand:%{fullversion}.%{_arch}%{?1}}
 
 # Standard JPackage directories and symbolic links.
-%define sdkdir()        %{expand:%{uniquesuffix %{?1}}}
+%define sdkdir()        %{expand:%{uniquesuffix -- %{?1}}}
 %define jrelnk()        %{expand:jre-%{javaver}-%{origin}-%{version}-%{release}.%{_arch}%{?1}}
 
-%define jredir()        %{expand:%{sdkdir %{?1}}/jre}
-%define sdkbindir()     %{expand:%{_jvmdir}/%{sdkdir %{?1}}/bin}
-%define jrebindir()     %{expand:%{_jvmdir}/%{jredir %{?1}}/bin}
+%define jredir()        %{expand:%{sdkdir -- %{?1}}/jre}
+%define sdkbindir()     %{expand:%{_jvmdir}/%{sdkdir -- %{?1}}/bin}
+%define jrebindir()     %{expand:%{_jvmdir}/%{jredir -- %{?1}}/bin}
 
 %global rpm_state_dir %{_localstatedir}/lib/rpm-state/
 
@@ -266,7 +266,7 @@ exit 0
 # MetaspaceShared::generate_vtable_methods not implemented for PPC JIT
 %ifnarch %{power64}
 #see https://bugzilla.redhat.com/show_bug.cgi?id=513605
-%{jrebindir %{?1}}/java -Xshare:dump >/dev/null 2>/dev/null
+%{jrebindir -- %{?1}}/java -Xshare:dump >/dev/null 2>/dev/null
 %endif
 %endif
 
@@ -277,46 +277,46 @@ fi
 
 ext=.gz
 alternatives \\
-  --install %{_bindir}/java java %{jrebindir %{?1}}/java $PRIORITY  --family %{name}.%{_arch} \\
-  --slave %{_jvmdir}/jre jre %{_jvmdir}/%{jredir %{?1}} \\
-  --slave %{_bindir}/jjs jjs %{jrebindir %{?1}}/jjs \\
-  --slave %{_bindir}/keytool keytool %{jrebindir %{?1}}/keytool \\
-  --slave %{_bindir}/orbd orbd %{jrebindir %{?1}}/orbd \\
-  --slave %{_bindir}/pack200 pack200 %{jrebindir %{?1}}/pack200 \\
-  --slave %{_bindir}/rmid rmid %{jrebindir %{?1}}/rmid \\
-  --slave %{_bindir}/rmiregistry rmiregistry %{jrebindir %{?1}}/rmiregistry \\
-  --slave %{_bindir}/servertool servertool %{jrebindir %{?1}}/servertool \\
-  --slave %{_bindir}/tnameserv tnameserv %{jrebindir %{?1}}/tnameserv \\
-  --slave %{_bindir}/policytool policytool %{jrebindir %{?1}}/policytool \\
-  --slave %{_bindir}/unpack200 unpack200 %{jrebindir %{?1}}/unpack200 \\
+  --install %{_bindir}/java java %{jrebindir -- %{?1}}/java $PRIORITY  --family %{name}.%{_arch} \\
+  --slave %{_jvmdir}/jre jre %{_jvmdir}/%{jredir -- %{?1}} \\
+  --slave %{_bindir}/jjs jjs %{jrebindir -- %{?1}}/jjs \\
+  --slave %{_bindir}/keytool keytool %{jrebindir -- %{?1}}/keytool \\
+  --slave %{_bindir}/orbd orbd %{jrebindir -- %{?1}}/orbd \\
+  --slave %{_bindir}/pack200 pack200 %{jrebindir -- %{?1}}/pack200 \\
+  --slave %{_bindir}/rmid rmid %{jrebindir -- %{?1}}/rmid \\
+  --slave %{_bindir}/rmiregistry rmiregistry %{jrebindir -- %{?1}}/rmiregistry \\
+  --slave %{_bindir}/servertool servertool %{jrebindir -- %{?1}}/servertool \\
+  --slave %{_bindir}/tnameserv tnameserv %{jrebindir -- %{?1}}/tnameserv \\
+  --slave %{_bindir}/policytool policytool %{jrebindir -- %{?1}}/policytool \\
+  --slave %{_bindir}/unpack200 unpack200 %{jrebindir -- %{?1}}/unpack200 \\
   --slave %{_mandir}/man1/java.1$ext java.1$ext \\
-  %{_mandir}/man1/java-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/java-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jjs.1$ext jjs.1$ext \\
-  %{_mandir}/man1/jjs-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jjs-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/keytool.1$ext keytool.1$ext \\
-  %{_mandir}/man1/keytool-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/keytool-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/orbd.1$ext orbd.1$ext \\
-  %{_mandir}/man1/orbd-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/orbd-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/pack200.1$ext pack200.1$ext \\
-  %{_mandir}/man1/pack200-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/pack200-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/rmid.1$ext rmid.1$ext \\
-  %{_mandir}/man1/rmid-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/rmid-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/rmiregistry.1$ext rmiregistry.1$ext \\
-  %{_mandir}/man1/rmiregistry-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/rmiregistry-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/servertool.1$ext servertool.1$ext \\
-  %{_mandir}/man1/servertool-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/servertool-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/tnameserv.1$ext tnameserv.1$ext \\
-  %{_mandir}/man1/tnameserv-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/tnameserv-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/policytool.1$ext policytool.1$ext \\
-  %{_mandir}/man1/policytool-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/policytool-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/unpack200.1$ext unpack200.1$ext \\
-  %{_mandir}/man1/unpack200-%{uniquesuffix %{?1}}.1$ext
+  %{_mandir}/man1/unpack200-%{uniquesuffix -- %{?1}}.1$ext
 
 for X in %{origin} %{javaver} ; do
-  alternatives --install %{_jvmdir}/jre-"$X" jre_"$X" %{_jvmdir}/%{jredir %{?1}} $PRIORITY --family %{name}.%{_arch}
+  alternatives --install %{_jvmdir}/jre-"$X" jre_"$X" %{_jvmdir}/%{jredir -- %{?1}} $PRIORITY --family %{name}.%{_arch}
 done
 
-update-alternatives --install %{_jvmdir}/jre-%{javaver}-%{origin} jre_%{javaver}_%{origin} %{_jvmdir}/%{jrelnk %{?1}} $PRIORITY  --family %{name}.%{_arch}
+update-alternatives --install %{_jvmdir}/jre-%{javaver}-%{origin} jre_%{javaver}_%{origin} %{_jvmdir}/%{jrelnk -- %{?1}} $PRIORITY  --family %{name}.%{_arch}
 
 
 update-desktop-database %{_datadir}/applications &> /dev/null || :
@@ -326,7 +326,7 @@ update-desktop-database %{_datadir}/applications &> /dev/null || :
 # also see that pretrans is only for nondebug
 if [ ! "%{?1}" == %{debug_suffix} ]; then
   if [ -f %{_libexecdir}/copy_jdk_configs_fixFiles.sh ] ; then
-    sh  %{_libexecdir}/copy_jdk_configs_fixFiles.sh %{rpm_state_dir}/%{name}.%{_arch}  %{_jvmdir}/%{sdkdir %{?1}}
+    sh  %{_libexecdir}/copy_jdk_configs_fixFiles.sh %{rpm_state_dir}/%{name}.%{_arch}  %{_jvmdir}/%{sdkdir -- %{?1}}
   fi
 fi
 
@@ -344,10 +344,10 @@ exit 0
 
 
 %define postun_headless() %{expand:
-  alternatives --remove java %{jrebindir %{?1}}/java
-  alternatives --remove jre_%{origin} %{_jvmdir}/%{jredir %{?1}}
-  alternatives --remove jre_%{javaver} %{_jvmdir}/%{jredir %{?1}}
-  alternatives --remove jre_%{javaver}_%{origin} %{_jvmdir}/%{jrelnk %{?1}}
+  alternatives --remove java %{jrebindir -- %{?1}}/java
+  alternatives --remove jre_%{origin} %{_jvmdir}/%{jredir -- %{?1}}
+  alternatives --remove jre_%{javaver} %{_jvmdir}/%{jredir -- %{?1}}
+  alternatives --remove jre_%{javaver}_%{origin} %{_jvmdir}/%{jrelnk -- %{?1}}
 }
 
 %define posttrans_script() %{expand:
@@ -363,101 +363,101 @@ fi
 
 ext=.gz
 alternatives \\
-  --install %{_bindir}/javac javac %{sdkbindir %{?1}}/javac $PRIORITY  --family %{name}.%{_arch} \\
-  --slave %{_jvmdir}/java java_sdk %{_jvmdir}/%{sdkdir %{?1}} \\
-  --slave %{_bindir}/appletviewer appletviewer %{sdkbindir %{?1}}/appletviewer \\
-  --slave %{_bindir}/extcheck extcheck %{sdkbindir %{?1}}/extcheck \\
-  --slave %{_bindir}/idlj idlj %{sdkbindir %{?1}}/idlj \\
-  --slave %{_bindir}/jar jar %{sdkbindir %{?1}}/jar \\
-  --slave %{_bindir}/jarsigner jarsigner %{sdkbindir %{?1}}/jarsigner \\
-  --slave %{_bindir}/javadoc javadoc %{sdkbindir %{?1}}/javadoc \\
-  --slave %{_bindir}/javah javah %{sdkbindir %{?1}}/javah \\
-  --slave %{_bindir}/javap javap %{sdkbindir %{?1}}/javap \\
-  --slave %{_bindir}/jcmd jcmd %{sdkbindir %{?1}}/jcmd \\
-  --slave %{_bindir}/jconsole jconsole %{sdkbindir %{?1}}/jconsole \\
-  --slave %{_bindir}/jdb jdb %{sdkbindir %{?1}}/jdb \\
-  --slave %{_bindir}/jdeps jdeps %{sdkbindir %{?1}}/jdeps \\
-  --slave %{_bindir}/jhat jhat %{sdkbindir %{?1}}/jhat \\
-  --slave %{_bindir}/jinfo jinfo %{sdkbindir %{?1}}/jinfo \\
-  --slave %{_bindir}/jmap jmap %{sdkbindir %{?1}}/jmap \\
-  --slave %{_bindir}/jps jps %{sdkbindir %{?1}}/jps \\
-  --slave %{_bindir}/jrunscript jrunscript %{sdkbindir %{?1}}/jrunscript \\
-  --slave %{_bindir}/jsadebugd jsadebugd %{sdkbindir %{?1}}/jsadebugd \\
-  --slave %{_bindir}/jstack jstack %{sdkbindir %{?1}}/jstack \\
-  --slave %{_bindir}/jstat jstat %{sdkbindir %{?1}}/jstat \\
-  --slave %{_bindir}/jstatd jstatd %{sdkbindir %{?1}}/jstatd \\
-  --slave %{_bindir}/native2ascii native2ascii %{sdkbindir %{?1}}/native2ascii \\
-  --slave %{_bindir}/rmic rmic %{sdkbindir %{?1}}/rmic \\
-  --slave %{_bindir}/schemagen schemagen %{sdkbindir %{?1}}/schemagen \\
-  --slave %{_bindir}/serialver serialver %{sdkbindir %{?1}}/serialver \\
-  --slave %{_bindir}/wsgen wsgen %{sdkbindir %{?1}}/wsgen \\
-  --slave %{_bindir}/wsimport wsimport %{sdkbindir %{?1}}/wsimport \\
-  --slave %{_bindir}/xjc xjc %{sdkbindir %{?1}}/xjc \\
+  --install %{_bindir}/javac javac %{sdkbindir -- %{?1}}/javac $PRIORITY  --family %{name}.%{_arch} \\
+  --slave %{_jvmdir}/java java_sdk %{_jvmdir}/%{sdkdir -- %{?1}} \\
+  --slave %{_bindir}/appletviewer appletviewer %{sdkbindir -- %{?1}}/appletviewer \\
+  --slave %{_bindir}/extcheck extcheck %{sdkbindir -- %{?1}}/extcheck \\
+  --slave %{_bindir}/idlj idlj %{sdkbindir -- %{?1}}/idlj \\
+  --slave %{_bindir}/jar jar %{sdkbindir -- %{?1}}/jar \\
+  --slave %{_bindir}/jarsigner jarsigner %{sdkbindir -- %{?1}}/jarsigner \\
+  --slave %{_bindir}/javadoc javadoc %{sdkbindir -- %{?1}}/javadoc \\
+  --slave %{_bindir}/javah javah %{sdkbindir -- %{?1}}/javah \\
+  --slave %{_bindir}/javap javap %{sdkbindir -- %{?1}}/javap \\
+  --slave %{_bindir}/jcmd jcmd %{sdkbindir -- %{?1}}/jcmd \\
+  --slave %{_bindir}/jconsole jconsole %{sdkbindir -- %{?1}}/jconsole \\
+  --slave %{_bindir}/jdb jdb %{sdkbindir -- %{?1}}/jdb \\
+  --slave %{_bindir}/jdeps jdeps %{sdkbindir -- %{?1}}/jdeps \\
+  --slave %{_bindir}/jhat jhat %{sdkbindir -- %{?1}}/jhat \\
+  --slave %{_bindir}/jinfo jinfo %{sdkbindir -- %{?1}}/jinfo \\
+  --slave %{_bindir}/jmap jmap %{sdkbindir -- %{?1}}/jmap \\
+  --slave %{_bindir}/jps jps %{sdkbindir -- %{?1}}/jps \\
+  --slave %{_bindir}/jrunscript jrunscript %{sdkbindir -- %{?1}}/jrunscript \\
+  --slave %{_bindir}/jsadebugd jsadebugd %{sdkbindir -- %{?1}}/jsadebugd \\
+  --slave %{_bindir}/jstack jstack %{sdkbindir -- %{?1}}/jstack \\
+  --slave %{_bindir}/jstat jstat %{sdkbindir -- %{?1}}/jstat \\
+  --slave %{_bindir}/jstatd jstatd %{sdkbindir -- %{?1}}/jstatd \\
+  --slave %{_bindir}/native2ascii native2ascii %{sdkbindir -- %{?1}}/native2ascii \\
+  --slave %{_bindir}/rmic rmic %{sdkbindir -- %{?1}}/rmic \\
+  --slave %{_bindir}/schemagen schemagen %{sdkbindir -- %{?1}}/schemagen \\
+  --slave %{_bindir}/serialver serialver %{sdkbindir -- %{?1}}/serialver \\
+  --slave %{_bindir}/wsgen wsgen %{sdkbindir -- %{?1}}/wsgen \\
+  --slave %{_bindir}/wsimport wsimport %{sdkbindir -- %{?1}}/wsimport \\
+  --slave %{_bindir}/xjc xjc %{sdkbindir -- %{?1}}/xjc \\
   --slave %{_mandir}/man1/appletviewer.1$ext appletviewer.1$ext \\
-  %{_mandir}/man1/appletviewer-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/appletviewer-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/extcheck.1$ext extcheck.1$ext \\
-  %{_mandir}/man1/extcheck-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/extcheck-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/idlj.1$ext idlj.1$ext \\
-  %{_mandir}/man1/idlj-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/idlj-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jar.1$ext jar.1$ext \\
-  %{_mandir}/man1/jar-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jar-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jarsigner.1$ext jarsigner.1$ext \\
-  %{_mandir}/man1/jarsigner-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jarsigner-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/javac.1$ext javac.1$ext \\
-  %{_mandir}/man1/javac-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/javac-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/javadoc.1$ext javadoc.1$ext \\
-  %{_mandir}/man1/javadoc-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/javadoc-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/javah.1$ext javah.1$ext \\
-  %{_mandir}/man1/javah-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/javah-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/javap.1$ext javap.1$ext \\
-  %{_mandir}/man1/javap-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/javap-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jcmd.1$ext jcmd.1$ext \\
-  %{_mandir}/man1/jcmd-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jcmd-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jconsole.1$ext jconsole.1$ext \\
-  %{_mandir}/man1/jconsole-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jconsole-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jdb.1$ext jdb.1$ext \\
-  %{_mandir}/man1/jdb-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jdb-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jdeps.1$ext jdeps.1$ext \\
-  %{_mandir}/man1/jdeps-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jdeps-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jhat.1$ext jhat.1$ext \\
-  %{_mandir}/man1/jhat-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jhat-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jinfo.1$ext jinfo.1$ext \\
-  %{_mandir}/man1/jinfo-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jinfo-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jmap.1$ext jmap.1$ext \\
-  %{_mandir}/man1/jmap-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jmap-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jps.1$ext jps.1$ext \\
-  %{_mandir}/man1/jps-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jps-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jrunscript.1$ext jrunscript.1$ext \\
-  %{_mandir}/man1/jrunscript-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jrunscript-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jsadebugd.1$ext jsadebugd.1$ext \\
-  %{_mandir}/man1/jsadebugd-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jsadebugd-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jstack.1$ext jstack.1$ext \\
-  %{_mandir}/man1/jstack-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jstack-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jstat.1$ext jstat.1$ext \\
-  %{_mandir}/man1/jstat-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jstat-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jstatd.1$ext jstatd.1$ext \\
-  %{_mandir}/man1/jstatd-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/jstatd-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/native2ascii.1$ext native2ascii.1$ext \\
-  %{_mandir}/man1/native2ascii-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/native2ascii-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/rmic.1$ext rmic.1$ext \\
-  %{_mandir}/man1/rmic-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/rmic-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/schemagen.1$ext schemagen.1$ext \\
-  %{_mandir}/man1/schemagen-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/schemagen-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/serialver.1$ext serialver.1$ext \\
-  %{_mandir}/man1/serialver-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/serialver-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/wsgen.1$ext wsgen.1$ext \\
-  %{_mandir}/man1/wsgen-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/wsgen-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/wsimport.1$ext wsimport.1$ext \\
-  %{_mandir}/man1/wsimport-%{uniquesuffix %{?1}}.1$ext \\
+  %{_mandir}/man1/wsimport-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/xjc.1$ext xjc.1$ext \\
-  %{_mandir}/man1/xjc-%{uniquesuffix %{?1}}.1$ext
+  %{_mandir}/man1/xjc-%{uniquesuffix -- %{?1}}.1$ext
 
 for X in %{origin} %{javaver} ; do
   alternatives \\
-    --install %{_jvmdir}/java-"$X" java_sdk_"$X" %{_jvmdir}/%{sdkdir %{?1}} $PRIORITY  --family %{name}.%{_arch}
+    --install %{_jvmdir}/java-"$X" java_sdk_"$X" %{_jvmdir}/%{sdkdir -- %{?1}} $PRIORITY  --family %{name}.%{_arch}
 done
 
-update-alternatives --install %{_jvmdir}/java-%{javaver}-%{origin} java_sdk_%{javaver}_%{origin} %{_jvmdir}/%{sdkdir %{?1}} $PRIORITY  --family %{name}.%{_arch} \\
+update-alternatives --install %{_jvmdir}/java-%{javaver}-%{origin} java_sdk_%{javaver}_%{origin} %{_jvmdir}/%{sdkdir -- %{?1}} $PRIORITY  --family %{name}.%{_arch} \\
 
 update-desktop-database %{_datadir}/applications &> /dev/null || :
 /bin/touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
@@ -466,10 +466,10 @@ exit 0
 }
 
 %define postun_devel() %{expand:
-  alternatives --remove javac %{sdkbindir %{?1}}/javac
-  alternatives --remove java_sdk_%{origin} %{_jvmdir}/%{sdkdir %{?1}}
-  alternatives --remove java_sdk_%{javaver} %{_jvmdir}/%{sdkdir %{?1}}
-  alternatives --remove java_sdk_%{javaver}_%{origin} %{_jvmdir}/%{sdkdir %{?1}}
+  alternatives --remove javac %{sdkbindir -- %{?1}}/javac
+  alternatives --remove java_sdk_%{origin} %{_jvmdir}/%{sdkdir -- %{?1}}
+  alternatives --remove java_sdk_%{javaver} %{_jvmdir}/%{sdkdir -- %{?1}}
+  alternatives --remove java_sdk_%{javaver}_%{origin} %{_jvmdir}/%{sdkdir -- %{?1}}
 
 update-desktop-database %{_datadir}/applications &> /dev/null || :
 
@@ -492,13 +492,13 @@ if [ "%{?1}" == %{debug_suffix} ]; then
 fi
 
 alternatives \\
-  --install %{_javadocdir}/java javadocdir %{_javadocdir}/%{uniquejavadocdir %{?1}}/api \\
+  --install %{_javadocdir}/java javadocdir %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api \\
   $PRIORITY  --family %{name}
 exit 0
 }
 
 %define postun_javadoc() %{expand:
-  alternatives --remove javadocdir %{_javadocdir}/%{uniquejavadocdir %{?1}}/api
+  alternatives --remove javadocdir %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api
 exit 0
 }
 
@@ -510,13 +510,13 @@ if [ "%{?1}" == %{debug_suffix} ]; then
 fi
 
 alternatives \\
-  --install %{_javadocdir}/java-zip javadoczip %{_javadocdir}/%{uniquejavadocdir %{?1}}.zip \\
+  --install %{_javadocdir}/java-zip javadoczip %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip \\
   $PRIORITY  --family %{name}
 exit 0
 }
 
 %define postun_javadoc_zip() %{expand:
-  alternatives --remove javadoczip %{_javadocdir}/%{uniquejavadocdir %{?1}}.zip
+  alternatives --remove javadoczip %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip
 exit 0
 }
 
@@ -528,168 +528,168 @@ exit 0
 
 %define files_jre_headless() %{expand:
 %defattr(-,root,root,-)
-%license %{buildoutputdir %{?1}}/images/%{j2sdkimage}/jre/ASSEMBLY_EXCEPTION
-%license %{buildoutputdir %{?1}}/images/%{j2sdkimage}/jre/LICENSE
-%license %{buildoutputdir %{?1}}/images/%{j2sdkimage}/jre/THIRD_PARTY_README
-%dir %{_jvmdir}/%{sdkdir %{?1}}
-%{_jvmdir}/%{jrelnk %{?1}}
+%license %{buildoutputdir -- %{?1}}/images/%{j2sdkimage}/jre/ASSEMBLY_EXCEPTION
+%license %{buildoutputdir -- %{?1}}/images/%{j2sdkimage}/jre/LICENSE
+%license %{buildoutputdir -- %{?1}}/images/%{j2sdkimage}/jre/THIRD_PARTY_README
+%dir %{_jvmdir}/%{sdkdir -- %{?1}}
+%{_jvmdir}/%{jrelnk -- %{?1}}
 %{_jvmprivdir}/*
-%dir %{_jvmdir}/%{jredir %{?1}}/lib/security
-%{_jvmdir}/%{jredir %{?1}}/lib/security/cacerts
-%config(noreplace) %{_jvmdir}/%{jredir %{?1}}/lib/security/US_export_policy.jar
-%config(noreplace) %{_jvmdir}/%{jredir %{?1}}/lib/security/local_policy.jar
-%config(noreplace) %{_jvmdir}/%{jredir %{?1}}/lib/security/java.policy
-%config(noreplace) %{_jvmdir}/%{jredir %{?1}}/lib/security/java.security
-%config(noreplace) %{_jvmdir}/%{jredir %{?1}}/lib/security/blacklisted.certs
-%config(noreplace) %{_jvmdir}/%{jredir %{?1}}/lib/logging.properties
-%{_mandir}/man1/java-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jjs-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/keytool-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/orbd-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/pack200-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/rmid-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/rmiregistry-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/servertool-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/tnameserv-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/unpack200-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/policytool-%{uniquesuffix %{?1}}.1*
-%config(noreplace) %{_jvmdir}/%{jredir %{?1}}/lib/security/nss.cfg
+%dir %{_jvmdir}/%{jredir -- %{?1}}/lib/security
+%{_jvmdir}/%{jredir -- %{?1}}/lib/security/cacerts
+%config(noreplace) %{_jvmdir}/%{jredir -- %{?1}}/lib/security/US_export_policy.jar
+%config(noreplace) %{_jvmdir}/%{jredir -- %{?1}}/lib/security/local_policy.jar
+%config(noreplace) %{_jvmdir}/%{jredir -- %{?1}}/lib/security/java.policy
+%config(noreplace) %{_jvmdir}/%{jredir -- %{?1}}/lib/security/java.security
+%config(noreplace) %{_jvmdir}/%{jredir -- %{?1}}/lib/security/blacklisted.certs
+%config(noreplace) %{_jvmdir}/%{jredir -- %{?1}}/lib/logging.properties
+%{_mandir}/man1/java-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jjs-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/keytool-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/orbd-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/pack200-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/rmid-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/rmiregistry-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/servertool-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/tnameserv-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/unpack200-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/policytool-%{uniquesuffix -- %{?1}}.1*
+%config(noreplace) %{_jvmdir}/%{jredir -- %{?1}}/lib/security/nss.cfg
 %ifarch %{jit_arches}
 %ifnarch %{power64}
-%attr(664, root, root) %ghost %{_jvmdir}/%{jredir %{?1}}/lib/%{archinstall}/server/classes.jsa
-%attr(664, root, root) %ghost %{_jvmdir}/%{jredir %{?1}}/lib/%{archinstall}/client/classes.jsa
+%attr(664, root, root) %ghost %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/server/classes.jsa
+%attr(664, root, root) %ghost %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/client/classes.jsa
 %endif
 %endif
-%{_jvmdir}/%{jredir %{?1}}/lib/%{archinstall}/server/
-%{_jvmdir}/%{jredir %{?1}}/lib/%{archinstall}/client/
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/server/
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/client/
 }
 
 %define files_devel() %{expand:
 %defattr(-,root,root,-)
-%license %{buildoutputdir %{?1}}/images/%{j2sdkimage}/ASSEMBLY_EXCEPTION
-%license %{buildoutputdir %{?1}}/images/%{j2sdkimage}/LICENSE
-%license %{buildoutputdir %{?1}}/images/%{j2sdkimage}/THIRD_PARTY_README
-%dir %{_jvmdir}/%{sdkdir %{?1}}/bin
-%dir %{_jvmdir}/%{sdkdir %{?1}}/include
-%dir %{_jvmdir}/%{sdkdir %{?1}}/lib
-%{_jvmdir}/%{sdkdir %{?1}}/bin/appletviewer
-%{_jvmdir}/%{sdkdir %{?1}}/bin/extcheck
-%{_jvmdir}/%{sdkdir %{?1}}/bin/idlj
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jar
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jarsigner
-%{_jvmdir}/%{sdkdir %{?1}}/bin/java
-%{_jvmdir}/%{sdkdir %{?1}}/bin/javac
-%{_jvmdir}/%{sdkdir %{?1}}/bin/javadoc
-%{_jvmdir}/%{sdkdir %{?1}}/bin/javah
-%{_jvmdir}/%{sdkdir %{?1}}/bin/javap
-%{_jvmdir}/%{sdkdir %{?1}}/bin/java-rmi.cgi
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jcmd
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jconsole
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jdb
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jdeps
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jhat
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jinfo
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jjs
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jmap
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jps
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jrunscript
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jsadebugd
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jstack
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jstat
-%{_jvmdir}/%{sdkdir %{?1}}/bin/jstatd
-%{_jvmdir}/%{sdkdir %{?1}}/bin/keytool
-%{_jvmdir}/%{sdkdir %{?1}}/bin/native2ascii
-%{_jvmdir}/%{sdkdir %{?1}}/bin/orbd
-%{_jvmdir}/%{sdkdir %{?1}}/bin/pack200
-%{_jvmdir}/%{sdkdir %{?1}}/bin/policytool
-%{_jvmdir}/%{sdkdir %{?1}}/bin/rmic
-%{_jvmdir}/%{sdkdir %{?1}}/bin/rmid
-%{_jvmdir}/%{sdkdir %{?1}}/bin/rmiregistry
-%{_jvmdir}/%{sdkdir %{?1}}/bin/schemagen
-%{_jvmdir}/%{sdkdir %{?1}}/bin/serialver
-%{_jvmdir}/%{sdkdir %{?1}}/bin/servertool
-%{_jvmdir}/%{sdkdir %{?1}}/bin/tnameserv
-%{_jvmdir}/%{sdkdir %{?1}}/bin/unpack200
-%{_jvmdir}/%{sdkdir %{?1}}/bin/wsgen
-%{_jvmdir}/%{sdkdir %{?1}}/bin/wsimport
-%{_jvmdir}/%{sdkdir %{?1}}/bin/xjc
-%{_jvmdir}/%{sdkdir %{?1}}/include/*
-%{_jvmdir}/%{sdkdir %{?1}}/lib/amd64
-%{_jvmdir}/%{sdkdir %{?1}}/lib/ct.sym
-%{_jvmdir}/%{sdkdir %{?1}}/lib/ir.idl
-%{_jvmdir}/%{sdkdir %{?1}}/lib/jconsole.jar
-%{_jvmdir}/%{sdkdir %{?1}}/lib/orb.idl
-%{_jvmdir}/%{sdkdir %{?1}}/lib/sa-jdi.jar
-%{_jvmdir}/%{sdkdir %{?1}}/lib/dt.jar
-%{_jvmdir}/%{sdkdir %{?1}}/lib/jexec
-%{_jvmdir}/%{sdkdir %{?1}}/lib/tools.jar
-%{_jvmjardir}/%{sdkdir %{?1}}
+%license %{buildoutputdir -- %{?1}}/images/%{j2sdkimage}/ASSEMBLY_EXCEPTION
+%license %{buildoutputdir -- %{?1}}/images/%{j2sdkimage}/LICENSE
+%license %{buildoutputdir -- %{?1}}/images/%{j2sdkimage}/THIRD_PARTY_README
+%dir %{_jvmdir}/%{sdkdir -- %{?1}}/bin
+%dir %{_jvmdir}/%{sdkdir -- %{?1}}/include
+%dir %{_jvmdir}/%{sdkdir -- %{?1}}/lib
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/appletviewer
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/extcheck
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/idlj
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jar
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jarsigner
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/java
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/javac
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/javadoc
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/javah
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/javap
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/java-rmi.cgi
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jcmd
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jconsole
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jdb
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jdeps
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jhat
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jinfo
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jjs
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jmap
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jps
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jrunscript
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jsadebugd
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jstack
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jstat
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jstatd
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/keytool
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/native2ascii
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/orbd
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/pack200
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/policytool
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/rmic
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/rmid
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/rmiregistry
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/schemagen
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/serialver
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/servertool
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/tnameserv
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/unpack200
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/wsgen
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/wsimport
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/xjc
+%{_jvmdir}/%{sdkdir -- %{?1}}/include/*
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/amd64
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/ct.sym
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/ir.idl
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/jconsole.jar
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/orb.idl
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/sa-jdi.jar
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/dt.jar
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/jexec
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/tools.jar
+%{_jvmjardir}/%{sdkdir -- %{?1}}
 %{_datadir}/applications/*jconsole%{?1}.desktop
-%{_mandir}/man1/appletviewer-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/extcheck-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/idlj-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jar-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jarsigner-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/javac-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/javadoc-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/javah-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/javap-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jconsole-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jcmd-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jdb-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jdeps-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jhat-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jinfo-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jmap-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jps-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jrunscript-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jsadebugd-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jstack-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jstat-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/jstatd-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/native2ascii-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/rmic-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/schemagen-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/serialver-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/wsgen-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/wsimport-%{uniquesuffix %{?1}}.1*
-%{_mandir}/man1/xjc-%{uniquesuffix %{?1}}.1*
+%{_mandir}/man1/appletviewer-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/extcheck-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/idlj-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jar-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jarsigner-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/javac-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/javadoc-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/javah-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/javap-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jconsole-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jcmd-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jdb-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jdeps-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jhat-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jinfo-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jmap-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jps-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jrunscript-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jsadebugd-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jstack-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jstat-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jstatd-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/native2ascii-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/rmic-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/schemagen-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/serialver-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/wsgen-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/wsimport-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/xjc-%{uniquesuffix -- %{?1}}.1*
 %if %{with_systemtap}
 %dir %{tapsetroot}
 %dir %{tapsetdir}
 %{tapsetdir}/*%{version}-%{release}.%{_arch}%{?1}.stp
-%dir %{_jvmdir}/%{sdkdir %{?1}}/tapset
-%{_jvmdir}/%{sdkdir %{?1}}/tapset/*.stp
+%dir %{_jvmdir}/%{sdkdir -- %{?1}}/tapset
+%{_jvmdir}/%{sdkdir -- %{?1}}/tapset/*.stp
 %endif
 }
 
 %define files_demo() %{expand:
 %defattr(-,root,root,-)
-%license %{buildoutputdir %{?1}}/images/%{j2sdkimage}/jre/LICENSE
+%license %{buildoutputdir -- %{?1}}/images/%{j2sdkimage}/jre/LICENSE
 }
 
 %define files_src() %{expand:
 %defattr(-,root,root,-)
 %doc README.src
-%{_jvmdir}/%{sdkdir %{?1}}/src.zip
+%{_jvmdir}/%{sdkdir -- %{?1}}/src.zip
 }
 
 %define files_javadoc() %{expand:
 %defattr(-,root,root,-)
-%doc %{_javadocdir}/%{uniquejavadocdir %{?1}}
-%license %{buildoutputdir %{?1}}/images/%{j2sdkimage}/jre/LICENSE
+%doc %{_javadocdir}/%{uniquejavadocdir -- %{?1}}
+%license %{buildoutputdir -- %{?1}}/images/%{j2sdkimage}/jre/LICENSE
 }
 
 %define files_javadoc_zip() %{expand:
 %defattr(-,root,root,-)
-%doc %{_javadocdir}/%{uniquejavadocdir %{?1}}.zip
-%license %{buildoutputdir %{?1}}/images/%{j2sdkimage}/jre/LICENSE
+%doc %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip
+%license %{buildoutputdir -- %{?1}}/images/%{j2sdkimage}/jre/LICENSE
 }
 
 %define files_accessibility() %{expand:
-%{_jvmdir}/%{jredir %{?1}}/lib/%{archinstall}/libatk-wrapper.so
-%{_jvmdir}/%{jredir %{?1}}/lib/ext/java-atk-wrapper.jar
-%{_jvmdir}/%{jredir %{?1}}/lib/accessibility.properties
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libatk-wrapper.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/ext/java-atk-wrapper.jar
+%{_jvmdir}/%{jredir -- %{?1}}/lib/accessibility.properties
 }
 
 # not-duplicated requires/provides/obsolate for normal/debug packages
@@ -2091,7 +2091,7 @@ require "copy_jdk_configs.lua"
 - Exclude 8175887 from Shenandoah builds as it has been included in that repo.
 - Added 8164293-pr3412-rh1459641.patch backport from 8u development tree
 - get rid of bin/* and lib/*, fixed rhbz1480777
-- adapted to rpm 4.14: all expanding macros changed to define, all %1 and %%1 replaced by %{?1}
+- adapted to rpm 4.14: all expanding macros changed to define, all %1 and %%1 replaced by %{?1}, all expandable macros parameter preffixed by --
 
 * Wed Aug 02 2017 Fedora Release Engineering <releng@fedoraproject.org> - 1:1.8.0.141-5.b16
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Binutils_Mass_Rebuild
