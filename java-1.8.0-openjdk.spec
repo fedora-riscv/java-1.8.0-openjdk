@@ -1173,7 +1173,7 @@ The OpenJDK runtime environment.
 Summary: OpenJDK Runtime Environment %{debug_on}
 Group:   Development/Languages
 
-%{java_rpo %{debug_suffix_unquoted}}
+%{java_rpo -- %{debug_suffix_unquoted}}
 %description debug
 The OpenJDK runtime environment.
 %{debug_warning}
@@ -1195,7 +1195,7 @@ The OpenJDK runtime environment without audio and video support.
 Summary: OpenJDK Runtime Environment %{debug_on}
 Group:   Development/Languages
 
-%{java_headless_rpo %{debug_suffix_unquoted}}
+%{java_headless_rpo -- %{debug_suffix_unquoted}}
 
 %description headless-debug
 The OpenJDK runtime environment without audio and video support.
@@ -1218,7 +1218,7 @@ The OpenJDK development tools.
 Summary: OpenJDK Development Environment %{debug_on}
 Group:   Development/Tools
 
-%{java_devel_rpo %{debug_suffix_unquoted}}
+%{java_devel_rpo -- %{debug_suffix_unquoted}}
 
 %description devel-debug
 The OpenJDK development tools.
@@ -1241,7 +1241,7 @@ The OpenJDK demos.
 Summary: OpenJDK Demos %{debug_on}
 Group:   Development/Languages
 
-%{java_demo_rpo %{debug_suffix_unquoted}}
+%{java_demo_rpo -- %{debug_suffix_unquoted}}
 
 %description demo-debug
 The OpenJDK demos.
@@ -1264,7 +1264,7 @@ The OpenJDK source bundle.
 Summary: OpenJDK Source Bundle %{for_debug}
 Group:   Development/Languages
 
-%{java_src_rpo %{debug_suffix_unquoted}}
+%{java_src_rpo -- %{debug_suffix_unquoted}}
 
 %description src-debug
 The OpenJDK source bundle %{for_debug}.
@@ -1303,7 +1303,7 @@ Group:   Documentation
 Requires: javapackages-tools
 BuildArch: noarch
 
-%{java_javadoc_rpo %{debug_suffix_unquoted}}
+%{java_javadoc_rpo -- %{debug_suffix_unquoted}}
 
 %description javadoc-debug
 The OpenJDK API documentation %{for_debug}.
@@ -1316,7 +1316,7 @@ Group:   Documentation
 Requires: javapackages-tools
 BuildArch: noarch
 
-%{java_javadoc_rpo %{debug_suffix_unquoted}}
+%{java_javadoc_rpo -- %{debug_suffix_unquoted}}
 
 %description javadoc-zip-debug
 The OpenJDK API documentation compressed in single archive %{for_debug}.
@@ -1344,7 +1344,7 @@ need to.
 %package accessibility-debug
 Summary: OpenJDK accessibility connector %{for_debug}
 
-%{java_accessibility_rpo %{debug_suffix_unquoted}}
+%{java_accessibility_rpo -- %{debug_suffix_unquoted}}
 
 %description accessibility-debug
 See normal java-%{version}-openjdk-accessibility description.
@@ -2048,40 +2048,40 @@ require "copy_jdk_configs.lua"
 
 %if %{include_debug_build} 
 %post debug
-%{post_script %{debug_suffix_unquoted}}
+%{post_script -- %{debug_suffix_unquoted}}
 
 %post headless-debug
-%{post_headless %{debug_suffix_unquoted}}
+%{post_headless -- %{debug_suffix_unquoted}}
 
 %postun debug
-%{postun_script %{debug_suffix_unquoted}}
+%{postun_script -- %{debug_suffix_unquoted}}
 
 %postun headless-debug
-%{postun_headless %{debug_suffix_unquoted}}
+%{postun_headless -- %{debug_suffix_unquoted}}
 
 %posttrans debug
-%{posttrans_script %{debug_suffix_unquoted}}
+%{posttrans_script -- %{debug_suffix_unquoted}}
 
 %post devel-debug
-%{post_devel %{debug_suffix_unquoted}}
+%{post_devel -- %{debug_suffix_unquoted}}
 
 %postun devel-debug
-%{postun_devel %{debug_suffix_unquoted}}
+%{postun_devel -- %{debug_suffix_unquoted}}
 
 %posttrans  devel-debug
-%{posttrans_devel %{debug_suffix_unquoted}}
+%{posttrans_devel -- %{debug_suffix_unquoted}}
 
 %post javadoc-debug
-%{post_javadoc %{debug_suffix_unquoted}}
+%{post_javadoc -- %{debug_suffix_unquoted}}
 
 %postun javadoc-debug
-%{postun_javadoc %{debug_suffix_unquoted}}
+%{postun_javadoc -- %{debug_suffix_unquoted}}
 
 %post javadoc-zip-debug
-%{post_javadoc_zip %{debug_suffix_unquoted}}
+%{post_javadoc_zip -- %{debug_suffix_unquoted}}
 
 %postun javadoc-zip-debug
-%{postun_javadoc_zip %{debug_suffix_unquoted}}
+%{postun_javadoc_zip -- %{debug_suffix_unquoted}}
 %endif
 
 %if %{include_normal_build} 
@@ -2127,28 +2127,28 @@ require "copy_jdk_configs.lua"
 
 %if %{include_debug_build} 
 %files debug
-%{files_jre %{debug_suffix_unquoted}}
+%{files_jre -- %{debug_suffix_unquoted}}
 
 %files headless-debug
-%{files_jre_headless %{debug_suffix_unquoted}}
+%{files_jre_headless -- %{debug_suffix_unquoted}}
 
 %files devel-debug
-%{files_devel %{debug_suffix_unquoted}}
+%{files_devel -- %{debug_suffix_unquoted}}
 
 %files demo-debug -f %{name}-demo.files-debug
-%{files_demo %{debug_suffix_unquoted}}
+%{files_demo -- %{debug_suffix_unquoted}}
 
 %files src-debug
-%{files_src %{debug_suffix_unquoted}}
+%{files_src -- %{debug_suffix_unquoted}}
 
 %files javadoc-debug
-%{files_javadoc %{debug_suffix_unquoted}}
+%{files_javadoc -- %{debug_suffix_unquoted}}
 
 %files javadoc-zip-debug
-%{files_javadoc_zip %{debug_suffix_unquoted}}
+%{files_javadoc_zip -- %{debug_suffix_unquoted}}
 
 %files accessibility-debug
-%{files_accessibility %{debug_suffix_unquoted}}
+%{files_accessibility -- %{debug_suffix_unquoted}}
 
 %if %{with_openjfx_binding}
 %files openjfx-debug -f %{name}-openjfx.files-debug
