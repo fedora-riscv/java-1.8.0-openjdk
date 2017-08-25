@@ -554,6 +554,8 @@ exit 0
 %{_jvmprivdir}/*
 %dir %{_jvmdir}/%{jredir %%1}/lib/security
 %{_jvmdir}/%{jredir %%1}/lib/security/cacerts
+%dir %{_jvmdir}/%{jredir -- %%1}
+%dir %{_jvmdir}/%{jredir -- %%1}/bin
 %{_jvmdir}/%{jredir %%1}/bin/java
 %{_jvmdir}/%{jredir %%1}/bin/jjs
 %{_jvmdir}/%{jredir %%1}/bin/keytool
@@ -591,6 +593,7 @@ exit 0
 %endif
 %{_jvmdir}/%{jredir %%1}/lib/%{archinstall}/server/
 %{_jvmdir}/%{jredir %%1}/lib/%{archinstall}/client/
+%dir %{_jvmdir}/%{jredir -- %%1}/lib/%{archinstall}/jli
 %{_jvmdir}/%{jredir %%1}/lib/%{archinstall}/jli/libjli.so
 %{_jvmdir}/%{jredir %%1}/lib/%{archinstall}/jvm.cfg
 %{_jvmdir}/%{jredir %%1}/lib/%{archinstall}/libattach.so
@@ -648,6 +651,10 @@ exit 0
 %{_jvmdir}/%{jredir %%1}/lib/management/*
 %{_jvmdir}/%{jredir %%1}/lib/cmm/*
 %{_jvmdir}/%{jredir %%1}/lib/ext/*
+%dir %{_jvmdir}/%{jredir -- %%1}/lib/images/cursors
+%dir %{_jvmdir}/%{jredir -- %%1}/lib/management
+%dir %{_jvmdir}/%{jredir -- %%1}/lib/cmm
+%dir %{_jvmdir}/%{jredir -- %%1}/lib/ext
 }
 
 %global files_devel() %{expand:
@@ -937,7 +944,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 1.%{buildver}%{?dist}
+Release: 4.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -2158,6 +2165,9 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Fri Aug 25 2017 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.144-4.b01
+- added ownership of diretories which were oonly listing files
+
 * Wed Aug 23 2017 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.144-1.b01
 - Update to aarch64-jdk8u144-b01 and aarch64-shenandoah-jdk8u144-b01.
 - Exclude 8175887 from Shenandoah builds as it has been included in that repo.
