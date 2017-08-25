@@ -700,7 +700,7 @@ exit 0
 %{_jvmdir}/%{sdkdir %%1}/bin/wsimport
 %{_jvmdir}/%{sdkdir %%1}/bin/xjc
 %{_jvmdir}/%{sdkdir %%1}/include/*
-%{_jvmdir}/%{sdkdir %%1}/lib/amd64
+%{_jvmdir}/%{sdkdir %%1}/lib/%{archinstall}
 %{_jvmdir}/%{sdkdir %%1}/lib/ct.sym
 %{_jvmdir}/%{sdkdir %%1}/lib/ir.idl
 %{_jvmdir}/%{sdkdir %%1}/lib/jconsole.jar
