@@ -556,6 +556,7 @@ exit 0
 %{_jvmdir}/%{jredir %%1}/lib/security/cacerts
 %dir %{_jvmdir}/%{jredir -- %%1}
 %dir %{_jvmdir}/%{jredir -- %%1}/bin
+%dir %{_jvmdir}/%{jredir -- %%1}/lib
 %{_jvmdir}/%{jredir %%1}/bin/java
 %{_jvmdir}/%{jredir %%1}/bin/jjs
 %{_jvmdir}/%{jredir %%1}/bin/keytool
