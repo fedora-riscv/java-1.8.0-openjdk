@@ -947,7 +947,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%1
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 5.%{buildver}%{?dist}
+Release: 6.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -1119,6 +1119,8 @@ Patch533: rh1367357.patch
 Patch534: always_assumemp.patch
 # PR2888: OpenJDK should check for system cacerts database (e.g. /etc/pki/java/cacerts)
 Patch539: pr2888.patch
+# test patch for rhbz#1484079
+Patch540: bug1484079.patch
 
 # Non-OpenJDK fixes
 Patch1000: enableCommentedOutSystemNss.patch
@@ -1511,6 +1513,7 @@ sh %{SOURCE12}
 %patch525
 %patch533
 %patch539
+%patch540
 
 # RHEL-only patches
 %if 0%{?rhel}
@@ -2168,6 +2171,9 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Fri Sep 15 2017 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.144-6.b01
+- added patch540, bug1484079.patch
+
 * Fri Aug 25 2017 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.144-4.b01
 - added ownership of diretories which were oonly listing files
 
