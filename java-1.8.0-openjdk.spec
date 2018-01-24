@@ -204,7 +204,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global project         aarch64-port
 %global repo            jdk8u
-%global revision        aarch64-jdk8u151-b12
+%global revision        aarch64-jdk8u161-b14
 # eg # jdk8u60-b27 -> jdk8u60 or # aarch64-jdk8u60-b27 -> aarch64-jdk8u60  (dont forget spec escape % by %%)
 %global whole_update    %(VERSION=%{revision}; echo ${VERSION%%-*})
 # eg  jdk8u60 -> 60 or aarch64-jdk8u60 -> 60
@@ -457,7 +457,7 @@ for X in %{origin} %{javaver} ; do
     --install %{_jvmdir}/java-"$X" java_sdk_"$X" %{_jvmdir}/%{sdkdir -- %{?1}} $PRIORITY  --family %{name}.%{_arch}
 done
 
-update-alternatives --install %{_jvmdir}/java-%{javaver}-%{origin} java_sdk_%{javaver}_%{origin} %{_jvmdir}/%{sdkdir -- %{?1}} $PRIORITY  --family %{name}.%{_arch} \\
+update-alternatives --install %{_jvmdir}/java-%{javaver}-%{origin} java_sdk_%{javaver}_%{origin} %{_jvmdir}/%{sdkdir -- %{?1}} $PRIORITY  --family %{name}.%{_arch}
 
 update-desktop-database %{_datadir}/applications &> /dev/null || :
 /bin/touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
@@ -533,6 +533,8 @@ exit 0
 
 %define files_jre_headless() %{expand:
 %defattr(-,root,root,-)
+%dir %{_sysconfdir}/.java/.systemPrefs
+%dir %{_sysconfdir}/.java
 %license %{buildoutputdir -- %{?1}}/images/%{j2sdkimage}/jre/ASSEMBLY_EXCEPTION
 %license %{buildoutputdir -- %{?1}}/images/%{j2sdkimage}/jre/LICENSE
 %license %{buildoutputdir -- %{?1}}/images/%{j2sdkimage}/jre/THIRD_PARTY_README
@@ -935,7 +937,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%{?1}
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 1.%{buildver}%{?dist}
+Release: 0.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -961,7 +963,7 @@ URL:      http://openjdk.java.net/
 Source0: %{project}-%{repo}-%{revision}.tar.xz
 
 # Shenandoah HotSpot
-Source1: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u151-b12.tar.xz
+Source1: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u161-b14.tar.xz
 
 # Custom README for -src subpackage
 Source2:  README.src
@@ -1073,26 +1075,6 @@ Patch526: 6260348-pr3066.patch
 # 8061305, PR3335, RH1423421: Javadoc crashes when method name ends with "Property"
 Patch538: 8061305-pr3335-rh1423421.patch
 
-# Patches upstream and appearing in 8u151
-# 8075484, PR3473, RH1490713: SocketInputStream.socketRead0 can hang even with soTimeout set
-Patch561: 8075484-pr3473-rh1490713.patch
-
-# Patches upstream and appearing in 8u152
-# 8153711, PR3313, RH1284948: [REDO] JDWP: Memory Leak: GlobalRefs never deleted when processing invokeMethod command
-Patch535: 8153711-pr3313-rh1284948.patch
-# 8162384, PR3122, RH1358661: Performance regression: bimorphic inlining may be bypassed by type speculation
-Patch532: 8162384-pr3122-rh1358661.patch
-# 8173941, PR3326: SA does not work if executable is DSO
-Patch547: 8173941-pr3326.patch
-# 8175813, PR3394, RH1448880: PPC64: "mbind: Invalid argument" when -XX:+UseNUMA is used
-Patch550: 8175813-pr3394-rh1448880.patch
-# 8175887, PR3415: C1 value numbering handling of Unsafe.get*Volatile is incorrect
-Patch554: 8175887-pr3415.patch
-
-# Patches upstream and appearing in 8u161
-# 8164293, PR3412, RH1459641: HotSpot leaking memory in long-running requests
-Patch555: 8164293-pr3412-rh1459641.patch
- 
 # Patches upstream and appearing in 8u162
 # 8181055, PR3394, RH1448880: PPC64: "mbind: Invalid argument" still seen after 8175813
 Patch551: 8181055-pr3394-rh1448880.patch
@@ -1505,16 +1487,10 @@ sh %{SOURCE12}
 %patch523
 %patch526
 %patch528
-%patch532
-%patch535
 %patch538
-%patch547
-%patch550
 %patch551
 %patch553
-%patch555
 %patch560
-%patch561
 
 # PPC64 updates
 %patch556
@@ -1529,12 +1505,6 @@ sh %{SOURCE12}
 # RHEL-only patches
 %if ! 0%{?fedora} && 0%{?rhel} <= 7
 %patch534
-%endif
-
-# 8175887 was added to the Shenandoah HotSpot ahead of time
-%if %{use_shenandoah_hotspot}
-%else
-%patch554
 %endif
 
 %patch1000
@@ -2154,6 +2124,21 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Wed Jan 24 2018 jvanek <jvanek@redhat.com> - 1:1.8.0.161-0.b14
+- updated to u161, rmeoved upstreamed patches
+- removed patch555 8164293-pr3412-rh1459641.patch
+- removed patch550 8175813-pr3394-rh1448880.patch
+- removed patch547 8173941-pr3326.patch
+- removed patch532 8162384-pr3122-rh1358661.patch
+- removed patch535 8153711-pr3313-rh1284948.patch
+- removed patch561 8075484-pr3473-rh1490713.patch
+- removed patch554 8175887-pr3415.patch
+
+* Mon Nov 13 2017 jvanek <jvanek@redhat.com> - 1:1.8.0.151-1.b12
+- added ownership of etc dirs
+- sysconfdir/.java/.systemPrefs
+- sysconfdir/.java
+
 * Wed Oct 25 2017 jvanek <jvanek@redhat.com> - 1:1.8.0.151-1.b12
 - updated to aarch64-jdk8u151-b12 (from aarch64-port/jdk8u)
 - updated to aarch64-shenandoah-jdk8u151-b12 (from aarch64-port/jdk8u-shenandoah) of hotspot
