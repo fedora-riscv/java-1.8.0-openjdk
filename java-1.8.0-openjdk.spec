@@ -975,7 +975,7 @@ URL:      http://openjdk.java.net/
 Source0: %{project}-%{repo}-%{revision}.tar.xz
 
 # Shenandoah HotSpot
-Source1: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u161-b14.tar.xz
+Source1: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u162-b12.tar.xz
 
 # Custom README for -src subpackage
 Source2:  README.src
