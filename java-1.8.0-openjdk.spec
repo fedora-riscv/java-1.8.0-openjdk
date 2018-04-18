@@ -569,7 +569,7 @@ exit 0
 %{_jvmdir}/%{jredir %%1}/bin/unpack200
 %dir %{_jvmdir}/%{jredir %%1}/lib/security/policy/unlimited/
 %dir %{_jvmdir}/%{jredir %%1}/lib/security/policy/limited/
-%dir %{_jvmdir}/%{jredir %%1}}/lib/security/policy/
+%dir %{_jvmdir}/%{jredir %%1}/lib/security/policy/
 %config(noreplace) %{_jvmdir}/%{jredir %%1}/lib/security/policy/unlimited/US_export_policy.jar
 %config(noreplace) %{_jvmdir}/%{jredir %%1}/lib/security/policy/unlimited/local_policy.jar
 %config(noreplace) %{_jvmdir}/%{jredir %%1}/lib/security/policy/limited/US_export_policy.jar
