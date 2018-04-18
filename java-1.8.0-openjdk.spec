@@ -204,7 +204,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global project         aarch64-port
 %global repo            jdk8u
-%global revision        aarch64-jdk8u162-b12
+%global revision        aarch64-jdk8u171-b10
 # eg # jdk8u60-b27 -> jdk8u60 or # aarch64-jdk8u60-b27 -> aarch64-jdk8u60  (dont forget spec escape % by %%)
 %global whole_update    %(VERSION=%{revision}; echo ${VERSION%%-*})
 # eg  jdk8u60 -> 60 or aarch64-jdk8u60 -> 60
@@ -567,6 +567,9 @@ exit 0
 %{_jvmdir}/%{jredir %%1}/bin/servertool
 %{_jvmdir}/%{jredir %%1}/bin/tnameserv
 %{_jvmdir}/%{jredir %%1}/bin/unpack200
+%dir %{_jvmdir}/%{jredir %%1}/lib/security/policy/unlimited/
+%dir %{_jvmdir}/%{jredir %%1}/lib/security/policy/limited/
+%dir %{_jvmdir}/%{jredir %%1}}/lib/security/policy/
 %config(noreplace) %{_jvmdir}/%{jredir %%1}/lib/security/policy/unlimited/US_export_policy.jar
 %config(noreplace) %{_jvmdir}/%{jredir %%1}/lib/security/policy/unlimited/local_policy.jar
 %config(noreplace) %{_jvmdir}/%{jredir %%1}/lib/security/policy/limited/US_export_policy.jar
@@ -590,8 +593,8 @@ exit 0
 %config(noreplace) %{_jvmdir}/%{jredir %%1}/lib/security/nss.cfg
 %ifarch %{jit_arches}
 %ifnarch %{power64}
-%attr(664, root, root) %ghost %{_jvmdir}/%{jredir %%1}/lib/%{archinstall}/server/classes.jsa
-%attr(664, root, root) %ghost %{_jvmdir}/%{jredir %%1}/lib/%{archinstall}/client/classes.jsa
+%ghost %{_jvmdir}/%{jredir %%1}/lib/%{archinstall}/server/classes.jsa
+%ghost %{_jvmdir}/%{jredir %%1}/lib/%{archinstall}/client/classes.jsa
 %endif
 %endif
 %{_jvmdir}/%{jredir %%1}/lib/%{archinstall}/server/
@@ -975,7 +978,7 @@ URL:      http://openjdk.java.net/
 Source0: %{project}-%{repo}-%{revision}.tar.xz
 
 # Shenandoah HotSpot
-Source1: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u162-b12.tar.xz
+Source1: aarch64-port-jdk8u-shenandoah-aarch64-shenandoah-jdk8u171-b10.tar.xz
 
 # Custom README for -src subpackage
 Source2:  README.src
@@ -1047,19 +1050,18 @@ Patch509: rh1176206-root.patch
 Patch523: pr2974-rh1337583.patch
 # PR3083, RH1346460: Regression in SSL debug output without an ECC provider
 Patch528: pr3083-rh1346460.patch
+# 8196516, RH1538767: libfontmanager.so needs to be built with LDFLAGS so as to allow
+#                     linking with unresolved symbols.
+Patch529: rhbz_1538767_fix_linking2.patch
+
+# Upstreamable debugging patches
 # Patches 204 and 205 stop the build adding .gnu_debuglink sections to unstripped files
 Patch204: hotspot-remove-debuglink.patch
 Patch205: dont-add-unnecessary-debug-links.patch
 # Enable debug information for assembly code files
 Patch206: hotspot-assembler-debuginfo.patch
-# 8188030, PR3459, RH1484079: AWT java apps fail to start when some minimal fonts are present
-Patch560: 8188030-pr3459-rh1484079.patch
-# 8196218, RH1538767: libfontmanager.so needs to link against headless awt library
-Patch561: rhbz_1538767_fix_linking.patch
-# fixing aarch64 segfault when boostraping after compiled by gcc8
-Patch562: rhbz_1540242.patch
-# rhbz1536622 - 32 bit java app started via JNI crashes with larger stack sizes
-Patch563: rhbz_1536622-JDK8197429-jdk8.patch
+# 8200556, PR3566: AArch64 port crashes on slowdebug builds
+Patch207: 8200556-pr3566.patch
 
 # Arch-specific upstreamable patches
 # PR2415: JVM -Xmx requirement is too high on s390
@@ -1068,6 +1070,8 @@ Patch100: %{name}-s390-java-opts.patch
 Patch102: %{name}-size_t.patch
 # Use "%z" for size_t on s390 as size_t != intptr_t
 Patch103: s390-size_t_format_flags.patch
+# Fix more cases of missing return statements on AArch64
+Patch104: pr3458-rh1540242.patch
 
 # Patches which need backporting to 8u
 # S8073139, RH1191652; fix name of ppc64le architecture
@@ -1093,16 +1097,18 @@ Patch526: 6260348-pr3066.patch
 # 8061305, PR3335, RH1423421: Javadoc crashes when method name ends with "Property"
 Patch538: 8061305-pr3335-rh1423421.patch
 Patch540: rhbz1548475-LDFLAGSusage.patch
+# 8188030, PR3459, RH1484079: AWT java apps fail to start when some minimal fonts are present
+Patch560: 8188030-pr3459-rh1484079.patch
+# 8197429, PR3456, RH153662{2,3}: 32 bit java app started via JNI crashes with larger stack sizes
+Patch561: 8197429-pr3456-rh1536622.patch
  
 # Patches ineligible for 8u
 # 8043805: Allow using a system-installed libjpeg
 Patch201: system-libjpeg.patch
-# custom securities
-Patch207: PR3183.patch
-# ustreamed aarch64 fixes
-Patch208: aarch64BuildFailure.patch
 Patch209: 8035496-hotspot.patch
 Patch210: suse_linuxfilestore.patch
+# custom securities
+Patch300: PR3183.patch
 
 # Local fixes
 # PR1834, RH1022017: Reduce curves reported by SSL to those in NSS
@@ -1111,6 +1117,10 @@ Patch525: pr1834-rh1022017.patch
 Patch534: always_assumemp.patch
 # PR2888: OpenJDK should check for system cacerts database (e.g. /etc/pki/java/cacerts)
 Patch539: pr2888.patch
+
+# Shenandoah fixes
+# PR3573: Fix TCK crash with Shenandoah
+Patch700: pr3573.patch
 
 # Non-OpenJDK fixes
 Patch1000: enableCommentedOutSystemNss.patch
@@ -1145,7 +1155,7 @@ BuildRequires: zip
 # Use OpenJDK 7 where available (on RHEL) to avoid
 # having to use the rhel-7.x-java-unsafe-candidate hack
 %if ! 0%{?fedora} && 0%{?rhel} <= 7
-BuildRequires: java-1.7.0-openjdk-devel
+BuildRequires: java-1.7.0-openjdk-devel >= 1.7.0.151-2.6.11.3
 %else
 BuildRequires: java-1.8.0-openjdk-devel
 %endif
@@ -1450,9 +1460,10 @@ sh %{SOURCE12}
 %patch205
 %patch206
 %patch207
-%patch208
 %patch209
 %patch210
+
+%patch300
 
 %patch1
 %patch3
@@ -1464,8 +1475,10 @@ sh %{SOURCE12}
 %patch102
 %patch103
 
-# ppc64le fixes
+# AArch64 fixes
+%patch104
 
+# ppc64le fixes
 %patch603
 %patch601
 %patch602
@@ -1496,10 +1509,9 @@ sh %{SOURCE12}
 %patch540
 %patch560
 pushd openjdk/jdk
-%patch561 -p1
+%patch529 -p1
 popd
-%patch562
-%patch563
+%patch561
 
 # RPM-only fixes
 %patch525
@@ -1508,6 +1520,11 @@ popd
 # RHEL-only patches
 %if ! 0%{?fedora} && 0%{?rhel} <= 7
 %patch534
+%endif
+
+# Shenandoah-only patches
+%if %{use_shenandoah_hotspot}
+%patch700
 %endif
 
 %patch1000
@@ -2160,6 +2177,22 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Wed Apr 18 2018 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.171-1.b10
+- Update to aarch64-jdk8u171-b10 and aarch64-shenandoah-jdk8u171-b10.
+- Fix jconsole.desktop.in subcategory, replacing "Monitor" with "Profiling" (PR3550) (gnu_andrew)
+- Fix invalid license 'LGPL+' (should be LGPLv2+ for ECC code) and add misisng ones (gnu_andrew)
+
+* Wed Apr 18 2018 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.162-7.b12
+- added ownership of policy dir and subdirs
+- removed ignored attributes for classes.jsa
+
+* Tue Apr 10 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.162-6.b12
+- Use correct patch for RHBZ#1538767 (JDK-8196516)
+
+* Mon Apr 02 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.162-5.b12
+- Cleanup from previous commit.
+- Remove unused upstream patch 8167200.hotspotAarch64.patch.
+
 * Thu Mar 29 2018 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.162-3.b12
 - returned patch562 rhbz_1540242.patch
 - added Patch563 rhbz_1536622-JDK8197429-jdk8.patch
@@ -2174,6 +2207,19 @@ require "copy_jdk_configs.lua"
 -  8168318/PR3466/RH1498320, 8170328/PR3466/RR1498321 and
 -  8181810/PR3466/RH1498319.
 
+* Wed Mar 07 2018 Adam Williamson <awilliam@redhat.com> - 1:1.8.0.161-9.b14
+- Rebuild to fix GCC 8 mis-compilation
+  See https://da.gd/YJVwk ("GCC 8 ABI change on x86_64")
+
+* Sun Feb 11 2018 Sandro Mani <manisandro@gmail.com> - 1:1.8.0.161-8.b14
+- Rebuild (giflib)
+
+* Fri Feb 09 2018 Igor Gnatenko <ignatenkobrain@fedoraproject.org> - 1:1.8.0.161-7.b14
+- Escape macros in %%changelog
+
+* Wed Feb 07 2018 Fedora Release Engineering <releng@fedoraproject.org> - 1:1.8.0.161-6.b14
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_28_Mass_Rebuild
+
 * Wed Jan 31 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.161-5.b14
 - Additional fix needed for FTBFS bug on aarch64.
   Resolves RHBZ#1540242.
@@ -2186,7 +2232,7 @@ require "copy_jdk_configs.lua"
 - Include Aarch64 build fixes post January 2018 CPU.
 
 * Mon Jan 29 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.161-2.b14
-- Work around ppc64le gdb backtrace problem in %check.
+- Work around ppc64le gdb backtrace problem in %%check.
   See RHBZ#1539664
 
 * Wed Jan 24 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.161-1.b14
@@ -2202,6 +2248,11 @@ require "copy_jdk_configs.lua"
 - removed patch535 8153711-pr3313-rh1284948.patch
 - removed patch561 8075484-pr3473-rh1490713.patch
 - removed patch554 8175887-pr3415.patch
+
+* Mon Nov 13 2017 jvanek <jvanek@redhat.com> - 1:1.8.0.151-1.b12
+- added ownership of etc dirs
+- sysconfdir/.java/.systemPrefs
+- sysconfdir/.java
 
 * Wed Oct 25 2017 jvanek <jvanek@redhat.com> - 1:1.8.0.151-1.b12
 - updated to aarch64-jdk8u151-b12 (from aarch64-port/jdk8u)
@@ -2602,7 +2653,7 @@ renamed: jdk8-archivedJavadoc.patch -> 8154313.patch, pr2991-rh1341258.patch -> 
 * Tue Dec 08 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-8.b17
 - used extracted lua scripts.
 - now depnding on copy-jdk-configs
-- config files persisting in pre instead of %pretrans
+- config files persisting in pre instead of %%pretrans
 
 * Tue Dec 08 2015 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.65-7.b17
 - changed way of generating the sources. As result:
