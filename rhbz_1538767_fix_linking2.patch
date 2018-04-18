@@ -31,3 +31,4 @@ diff --git a/make/lib/Awt2dLibraries.gmk b/make/lib/Awt2dLibraries.gmk
          $(call SET_SHARED_LIBRARY_ORIGIN), \
      LDFLAGS_SUFFIX := $(BUILD_LIBFONTMANAGER_FONTLIB), \
      LDFLAGS_SUFFIX_linux := -lawt $(LIBM) $(LIBCXX) -ljava -ljvm -lc, \
+
