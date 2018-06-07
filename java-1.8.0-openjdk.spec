@@ -1052,6 +1052,8 @@ Patch100: %{name}-s390-java-opts.patch
 Patch102: %{name}-size_t.patch
 # Use "%z" for size_t on s390 as size_t != intptr_t
 Patch103: s390-size_t_format_flags.patch
+# Fix more cases of missing return statements on AArch64
+Patch104: pr3458-rh1540242.patch
 
 # Patches which need backporting to 8u
 # S8073139, RH1191652; fix name of ppc64le architecture
@@ -1447,6 +1449,12 @@ sh %{SOURCE12}
 %patch100
 %patch102
 %patch103
+
+# AArch64 fixes
+%if %{use_shenandoah_hotspot}
+%else
+%patch104
+%endif
 
 # ppc64le fixes
 %patch603
