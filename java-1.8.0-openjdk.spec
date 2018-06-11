@@ -2183,6 +2183,29 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Mon Jun 11 2018 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.172-5.b11
+- Read jssecacerts file prior to trying either cacerts file (system or local) (PR3575)
+- Resolves: rhbz#1567204
+- Fix a number of bad bug identifiers (PR3546 should be PR3578, PR3456 should be PR3546)
+- Update Shenandoah tarball to include 2018-05-15 merge.
+- Split PR3458/RH1540242 fix into AArch64 & Zero sections, so former can be skipped on Shenandoah builds.
+- Drop PR3573 patch applied upstream.
+- Restrict 8187577 fix to non-Shenandoah builds, as it's included in the new tarball.
+- Sync with IcedTea 3.8.0.
+- Label architecture-specific fixes with architecture concerned
+- x86: S8199936, PR3533: HotSpot generates code with unaligned stack, crashes on SSE operations (-mstackrealign workaround)
+- PR3539, RH1548475: Pass EXTRA_LDFLAGS to HotSpot build
+- 8171000, PR3542, RH1402819: Robot.createScreenCapture() crashes in wayland mode
+- 8197546, PR3542, RH1402819: Fix for 8171000 breaks Solaris + Linux builds
+- 8185723, PR3553: Zero: segfaults on Power PC 32-bit
+- 8186461, PR3557: Zero's atomic_copy64() should use SPE instructions on linux-powerpcspe
+- PR3559: Use ldrexd for atomic reads on ARMv7.
+- 8187577, PR3578: JVM crash during gc doing concurrent marking
+- 8201509, PR3579: Zero: S390 31bit atomic_copy64 inline assembler is wrong
+- 8165489, PR3589: Missing G1 barrier in Unsafe_GetObjectVolatile
+- PR3591: Fix for bug 3533 doesn't add -mstackrealign to JDK code
+- 8184309, PR3596: Build warnings from GCC 7.1 on Fedora 26
+
 * Wed Jun 06 2018 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.172-1.b11
 - updated to u172-b11
 - removed patches:
