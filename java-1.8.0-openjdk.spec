@@ -91,7 +91,8 @@
 
 
 # fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349
-%global _privatelibs libmawt[.]so.*
+%global _privatelibs libawt_xawt[.]so.*|libjawt[.]so.*|libjsoundalsa[.]so.*|libsplashscreen[.]so.*|libjli[.]so.*|libjawt[.]so.*|libjli[.]so.*|libattach[.]so.*|libawt[.]so.*|libawt_headless[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libhprof[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas_unix[.]so.*|libjava[.]so.*|libjava_crw_demo[.]so.*|libjavajpeg[.]so.*|libjdwp[.]so.*|libjsdt[.]so.*|libjsig[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libnpt[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libsunec[.]so.*|libunpack[.]so.*|libverify[.]so.*|libzip[.]so.*|libjsig[.]so.*|libjvm[.]so.*
+
 %global __provides_exclude ^(%{_privatelibs})$
 %global __requires_exclude ^(%{_privatelibs})$
 
@@ -927,7 +928,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%{?1}
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 6.%{buildver}%{?dist}
+Release: 7.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons
 # and this change was brought into RHEL-4. java-1.5.0-ibm packages
 # also included the epoch in their virtual provides. This created a
@@ -2176,6 +2177,9 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Wed Jun 13 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.172-7.b11
+- Fix reg-ex for filtering private libraries' provides/requires.
+
 * Wed Jun 13 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.172-6.b11
 - Remove build flags exemption for aarch64 now the platform is more mature and can bootstrap OpenJDK with these flags.
 - Remove duplicate -fstack-protector-strong; it is provided by the RHEL cflags.
