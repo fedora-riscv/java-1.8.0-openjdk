@@ -66,21 +66,14 @@
 %endif
 
 
-%ifarch %{aarch64}
-# Disable hardened build on AArch64 as it didn't bootcycle
-%undefine _hardened_build
-%global ourcppflags "-fstack-protector-strong"
-%global ourldflags %{nil}
-%else
 # Filter out flags from the optflags macro that cause problems with the OpenJDK build
 # We filter out -O flags so that the optimisation of HotSpot is not lowered from O3 to O2
 # We filter out -Wall which will otherwise cause HotSpot to produce hundreds of thousands of warnings (100+mb logs)
 # We replace it with -Wformat (required by -Werror=format-security) and -Wno-cpp to avoid FORTIFY_SOURCE warnings
 # We filter out -fexceptions as the HotSpot build explicitly does -fno-exceptions and it's otherwise the default for C++
 %global ourflags %(echo %optflags | sed -e 's|-Wall|-Wformat -Wno-cpp|' | sed -r -e 's|-O[0-9]*||')
-%global ourcppflags %(echo %ourflags | sed -e 's|-fexceptions||') "-fstack-protector-strong"
+%global ourcppflags %(echo %ourflags | sed -e 's|-fexceptions||')
 %global ourldflags %{__global_ldflags}
-%endif
 
 # With diabled nss is NSS deactivated, so in NSS_LIBDIR can be wrong path
 # the initialisation must be here. LAter the pkg-connfig have bugy behaviour
@@ -934,7 +927,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%{?1}
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 5.%{buildver}%{?dist}
+Release: 6.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
 # and this change was brought into RHEL-4.  java-1.5.0-ibm packages
 # also included the epoch in their virtual provides.  This created a
@@ -2183,14 +2176,27 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Wed Jun 13 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.172-6.b11
+- Remove build flags exemption for aarch64 now the platform is more mature and can bootstrap OpenJDK with these flags.
+- Remove duplicate -fstack-protector-strong; it is provided by the RHEL cflags.
+- Add missing changelog credits
+
 * Mon Jun 11 2018 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.172-5.b11
+- Merge changes from RHEL 7
+
+* Mon Jun 11 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.172-5.b11
 - Read jssecacerts file prior to trying either cacerts file (system or local) (PR3575)
-- Resolves: rhbz#1567204
+
+* Mon Jun 11 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.172-5.b11
 - Fix a number of bad bug identifiers (PR3546 should be PR3578, PR3456 should be PR3546)
+
+* Thu Jun 07 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.172-5.b11
 - Update Shenandoah tarball to include 2018-05-15 merge.
 - Split PR3458/RH1540242 fix into AArch64 & Zero sections, so former can be skipped on Shenandoah builds.
 - Drop PR3573 patch applied upstream.
 - Restrict 8187577 fix to non-Shenandoah builds, as it's included in the new tarball.
+
+* Thu Jun 07 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.172-5.b11
 - Sync with IcedTea 3.8.0.
 - Label architecture-specific fixes with architecture concerned
 - x86: S8199936, PR3533: HotSpot generates code with unaligned stack, crashes on SSE operations (-mstackrealign workaround)
