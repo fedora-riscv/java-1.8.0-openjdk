@@ -91,7 +91,7 @@
 
 
 # fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349
-%global _privatelibs libawt_xawt[.]so.*|libjawt[.]so.*|libjsoundalsa[.]so.*|libsplashscreen[.]so.*|libjli[.]so.*|libjawt[.]so.*|libjli[.]so.*|libattach[.]so.*|libawt[.]so.*|libawt_headless[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libhprof[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas_unix[.]so.*|libjava[.]so.*|libjava_crw_demo[.]so.*|libjavajpeg[.]so.*|libjdwp[.]so.*|libjsdt[.]so.*|libjsig[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libnpt[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libsunec[.]so.*|libunpack[.]so.*|libverify[.]so.*|libzip[.]so.*|libjsig[.]so.*|libjvm[.]so.*
+%global _privatelibs libawt_xawt[.]so.*|libjawt[.]so.*|libjsoundalsa[.]so.*|libsplashscreen[.]so.*|libjli[.]so.*|libjawt[.]so.*|libjli[.]so.*|libattach[.]so.*|libawt[.]so.*|libawt_headless[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libhprof[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas_unix[.]so.*|libjava[.]so.*|libjava_crw_demo[.]so.*|libjavajpeg[.]so.*|libjdwp[.]so.*|libjsdt[.]so.*|libjsig[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libnpt[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libsunec[.]so.*|libunpack[.]so.*|libverify[.]so.*|libzip[.]so.*|libjsig[.]so.*
 
 %global __provides_exclude ^(%{_privatelibs})$
 %global __requires_exclude ^(%{_privatelibs})$
@@ -928,10 +928,10 @@ Obsoletes: java-1.7.0-openjdk-accessibility%{?1}
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 7.%{buildver}%{?dist}
-# java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons,
-# and this change was brought into RHEL-4.  java-1.5.0-ibm packages
-# also included the epoch in their virtual provides.  This created a
+Release: 8.%{buildver}%{?dist}
+# java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons
+# and this change was brought into RHEL-4. java-1.5.0-ibm packages
+# also included the epoch in their virtual provides. This created a
 # situation where in-the-wild java-1.5.0-ibm packages provided "java =
 # 1:1.5.0".  In RPM terms, "1.6.0 < 1:1.5.0" since 1.6.0 is
 # interpreted as 0:1.6.0.  So the "java >= 1.6.0" requirement would be
@@ -2177,6 +2177,9 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Thu Jun 14 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.172-8.b11
+- Add provides/requires for libjvm.so back. See RHBZ#1591215.
+
 * Wed Jun 13 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.172-7.b11
 - Fix reg-ex for filtering private libraries' provides/requires.
 
