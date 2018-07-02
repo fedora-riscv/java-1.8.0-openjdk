@@ -90,8 +90,12 @@
 %global NSS_BUILDTIME_VERSION %(if [ "x%{NSS_BUILDTIME_NUMBER}" == "x" ] ; then echo "" ;else echo ">= %{NSS_BUILDTIME_NUMBER}" ;fi)
 
 
-# fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349
-%global _privatelibs libawt_xawt[.]so.*|libjawt[.]so.*|libjsoundalsa[.]so.*|libsplashscreen[.]so.*|libjli[.]so.*|libjawt[.]so.*|libjli[.]so.*|libattach[.]so.*|libawt[.]so.*|libawt_headless[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libhprof[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas_unix[.]so.*|libjava[.]so.*|libjava_crw_demo[.]so.*|libjavajpeg[.]so.*|libjdwp[.]so.*|libjsdt[.]so.*|libjsig[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libnpt[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libsunec[.]so.*|libunpack[.]so.*|libverify[.]so.*|libzip[.]so.*|libjsig[.]so.*|lib[.]so\\(SUNWprivate_.*
+# Fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349.
+# See also https://bugzilla.redhat.com/show_bug.cgi?id=1590796
+# as to why some libraries *cannot* be excluded. In particular,
+# these are:
+# libjsig.so, libjava.so, libjawt.so, libjvm.so and libverify.so
+%global _privatelibs libatk-wrapper[.]so.*|libattach[.]so.*|libawt_headless[.]so.*|libawt[.]so.*|libawt_xawt[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libhprof[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas_unix[.]so.*|libjava_crw_demo[.]so.*|libjavajpeg[.]so.*|libjdwp[.]so.*|libjli[.]so.*|libjsdt[.]so.*|libjsoundalsa[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libnpt[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libsplashscreen[.]so.*|libsunec[.]so.*|libunpack[.]so.*|libzip[.]so.*|lib[.]so\\(SUNWprivate_.*
 
 %global __provides_exclude ^(%{_privatelibs})$
 %global __requires_exclude ^(%{_privatelibs})$
@@ -928,7 +932,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%{?1}
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 11.%{buildver}%{?dist}
+Release: 12.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons
 # and this change was brought into RHEL-4. java-1.5.0-ibm packages
 # also included the epoch in their virtual provides. This created a
@@ -2193,6 +2197,10 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Mon Jul 02 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.172-12.b11
+- Fix requires/provides filters for internal libs. See
+  RHBZ#1590796
+
 * Wed Jun 20 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.172-11.b11
 - Add additional fix (PR3601) to fix -Wreturn-type failures introduced by 8061651
 - Backport 8064786 (PR3601) to fix -Wreturn-type failure on debug builds.
