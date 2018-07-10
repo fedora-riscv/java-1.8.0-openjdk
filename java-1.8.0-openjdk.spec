@@ -932,7 +932,7 @@ Obsoletes: java-1.7.0-openjdk-accessibility%{?1}
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}
-Release: 12.%{buildver}%{?dist}
+Release: 13.%{buildver}%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons
 # and this change was brought into RHEL-4. java-1.5.0-ibm packages
 # also included the epoch in their virtual provides. This created a
@@ -1659,6 +1659,9 @@ else
 debugbuild=%{normalbuild_parameter}
 fi
 
+# Variable used in hs_err hook on build failures
+top_dir_abs_path=$(pwd)/%{top_level_dir_name}
+
 mkdir -p %{buildoutputdir -- $suffix}
 pushd %{buildoutputdir -- $suffix}
 
@@ -1702,7 +1705,7 @@ make \
     POST_STRIP_CMD="" \
     LOG=trace \
     SCTP_WERROR= \
-    %{targets}
+    %{targets} || ( pwd; find $top_dir_abs_path -name "hs_err_pid*.log" | xargs cat && false )
 
 make zip-docs
 
@@ -2197,6 +2200,9 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Tue Jul 10 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.172-13.b11
+- Fix hook to show hs_err*.log files on failures.
+
 * Mon Jul 02 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.172-12.b11
 - Fix requires/provides filters for internal libs. See
   RHBZ#1590796
