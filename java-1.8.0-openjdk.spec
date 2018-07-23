@@ -158,6 +158,8 @@
 %global archinstall %{_arch}
 %endif
 
+
+
 %ifarch %{jit_arches}
 %global with_systemtap 1
 %else
@@ -783,7 +785,6 @@ exit 0
 %define java_rpo() %{expand:
 Requires: fontconfig%{?_isa}
 Requires: xorg-x11-fonts-Type1
-
 # Requires rest of java
 Requires: %{name}-headless%{?1}%{?_isa} = %{epoch}:%{version}-%{release}
 OrderWithRequires: %{name}-headless%{?1}%{?_isa} = %{epoch}:%{version}-%{release}
@@ -1016,7 +1017,11 @@ Source20: repackReproduciblePolycies.sh
 Source100: config.guess
 Source101: config.sub
 
+############################################
+#
 # RPM/distribution specific patches
+#
+############################################
 
 # Accessibility patches
 # Ignore AWTError when assistive technologies are loaded 
@@ -1024,7 +1029,11 @@ Patch1:   %{name}-accessible-toolkit.patch
 # Restrict access to java-atk-wrapper classes
 Patch3: java-atk-wrapper-security.patch
 
+#############################################
+#
 # Upstreamable patches
+#
+#############################################
 # PR2737: Allow multiple initialization of PKCS11 libraries
 Patch5: multiple-pkcs11-library-init.patch
 # PR2095, RH1163501: 2048-bit DH upper bound too small for Fedora infrastructure (sync with IcedTea 2.x)
@@ -1059,11 +1068,14 @@ Patch528: pr3083-rh1346460.patch
 Patch529: rh1566890_embargoed20180521.patch
 # PR3601: Fix additional -Wreturn-type issues introduced by 8061651
 Patch530: pr3601.patch
-# 8196516, RH1538767: libfontmanager.so needs to be built with LDFLAGS so as to allow
-#                     linking with unresolved symbols.
-Patch531: rhbz_1538767_fix_linking.patch
+# PR3183: Support Fedora/RHEL system crypto policy
+Patch300: pr3183.patch
 
+#############################################
+#
 # Upstreamable debugging patches
+#
+#############################################
 # Patches 204 and 205 stop the build adding .gnu_debuglink sections to unstripped files
 # 8207234: More libraries with .gnu_debuglink sections added unconditionally
 Patch205: 8207234-dont-add-unnecessary-debug-links.patch
@@ -1080,7 +1092,11 @@ Patch105: 8199936-pr3533-workaround.patch
 # AArch64: PR3519: Fix further functions with a missing return value (AArch64)
 Patch106: pr3519.patch
 
+#############################################
+#
 # Patches which need backporting to 8u
+#
+#############################################
 # S8073139, RH1191652; fix name of ppc64le architecture
 Patch601: %{name}-rh1191652-root.patch
 Patch602: %{name}-rh1191652-jdk.patch
@@ -1118,10 +1134,16 @@ Patch575: 8197981-pr3548.patch
 Patch576: 8064786-pr3599.patch
 # 8062808, PR3548: Turn on the -Wreturn-type warning
 Patch577: 8062808-pr3548.patch
+# 8165852, PR3468: (fs) Mount point not found for a file which is present in overlayfs
+Patch210: 8165852-pr3468.patch
 # 8207057, PR3613: Enable debug information for assembly code files
 Patch206: 8207057-pr3613-hotspot-assembler-debuginfo.patch
 
+#############################################
+#
 # Patches appearing in 8u192
+#
+#############################################
 # S8031668, PR2842: TOOLCHAIN_FIND_COMPILER unexpectedly resolves symbolic links
 Patch506: pr2842-01.patch
 # S8148351, PR2842: Only display resolved symlink for compiler, do not change path
@@ -1142,6 +1164,9 @@ Patch566: 8186461-pr3557.patch
 Patch569: 8201509-pr3579.patch
 # 8165489, PR3589: Missing G1 barrier in Unsafe_GetObjectVolatile
 Patch570: 8165489-pr3589.patch
+# 8196516, RH1538767: libfontmanager.so needs to be built with LDFLAGS so as to allow
+#                     linking with unresolved symbols.
+Patch531: 8196516-pr3523-rh1538767.patch
 # 8075942, PR3602: ArrayIndexOutOfBoundsException in sun.java2d.pisces.Dasher.goTo
 Patch578: 8075942-pr3602-rh1582032.patch
 # 8203182, PR3603: Release session if initialization of SunPKCS11 Signature fails
@@ -1153,14 +1178,19 @@ Patch581: 8146115-pr3508-rh1463098.patch
 # 8206425: .gnu_debuglink sections added unconditionally when no debuginfo is stripped
 Patch204: 8206425-hotspot-remove-debuglink.patch
 
+#############################################
+#
 # Patches ineligible for 8u
+#
+#############################################
 # 8043805: Allow using a system-installed libjpeg
 Patch201: system-libjpeg.patch
-Patch210: suse_linuxfilestore.patch
-# custom securities
-Patch300: PR3183.patch
 
+#############################################
+#
 # Local fixes
+#
+#############################################
 # PR1834, RH1022017: Reduce curves reported by SSL to those in NSS
 Patch525: pr1834-rh1022017.patch
 # Turn on AssumeMP by default on RHEL systems
@@ -1170,9 +1200,11 @@ Patch539: pr2888.patch
 # PR3575, RH1567204: System cacerts database handling should not affect jssecacerts
 Patch540: pr3575-rh1567204.patch
 
-# Shenandoah fixes
-
+#############################################
+#
 # Non-OpenJDK fixes
+#
+#############################################
 Patch1000: enableCommentedOutSystemNss.patch
 
 BuildRequires: autoconf
@@ -1524,6 +1556,7 @@ sh %{SOURCE12}
 %patch102
 %patch103
 
+# AArch64 fixes
 %patch106
 
 # x86 fixes
