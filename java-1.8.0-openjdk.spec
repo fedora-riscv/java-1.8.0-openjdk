@@ -145,53 +145,41 @@
 # does not match that given by _build_cpu
 %ifarch x86_64
 %global archinstall amd64
-%global stapinstall x86_64
 %endif
 %ifarch ppc
 %global archinstall ppc
-%global stapinstall powerpc
 %endif
 %ifarch %{ppc64be}
 %global archinstall ppc64
-%global stapinstall powerpc
 %endif
 %ifarch %{ppc64le}
 %global archinstall ppc64le
-%global stapinstall powerpc
 %endif
 %ifarch %{ix86}
 %global archinstall i386
-%global stapinstall i386
 %endif
 %ifarch ia64
 %global archinstall ia64
-%global stapinstall ia64
 %endif
 %ifarch s390
 %global archinstall s390
-%global stapinstall s390
 %endif
 %ifarch s390x
 %global archinstall s390x
-%global stapinstall s390
 %endif
 %ifarch %{arm}
 %global archinstall arm
-%global stapinstall arm
 %endif
 %ifarch %{aarch64}
 %global archinstall aarch64
-%global stapinstall arm64
 %endif
 # 32 bit sparc, optimized for v9
 %ifarch sparcv9
 %global archinstall sparc
-%global stapinstall %{_build_cpu}
 %endif
 # 64 bit sparc
 %ifarch sparc64
 %global archinstall sparcv9
-%global stapinstall %{_build_cpu}
 %endif
 %ifnarch %{jit_arches}
 %global archinstall %{_arch}
@@ -228,24 +216,18 @@
 %global with_openjfx_binding 0
 %endif
 
-# Convert an absolute path to a relative path.  Each symbolic link is
-# specified relative to the directory in which it is installed so that
-# it will resolve properly within chrooted installations.
-%global script 'use File::Spec; print File::Spec->abs2rel($ARGV[0], $ARGV[1])'
-%global abs2rel %{__perl} -e %{script}
-
-
 # Standard JPackage naming and versioning defines.
 %global origin          openjdk
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
-%global project         aarch64-port
-%global repo            jdk8u
-%global revision        aarch64-jdk8u181-b13
 %global shenandoah_project	aarch64-port
 %global shenandoah_repo		jdk8u-shenandoah
-%global shenandoah_revision    	aarch64-shenandoah-jdk8u181-b13
+%global shenandoah_revision    	aarch64-shenandoah-jdk8u181-b15
+# Define old aarch64/jdk8u tree variables for compatibility
+%global project         %{shenandoah_project}
+%global repo            %{shenandoah_repo}
+%global revision        %{shenandoah_revision}
 
 # eg # jdk8u60-b27 -> jdk8u60 or # aarch64-jdk8u60-b27 -> aarch64-jdk8u60  (dont forget spec escape % by %%)
 %global whole_update    %(VERSION=%{revision}; echo ${VERSION%%-*})
@@ -290,7 +272,8 @@
 # for the primary arch for now). Systemtap uses the machine name
 # aka build_cpu as architecture specific directory name.
 %global tapsetroot /usr/share/systemtap
-%global tapsetdir %{tapsetroot}/tapset/%{stapinstall}
+%global tapsetdirttapset %{tapsetroot}/tapset/
+%global tapsetdir %{tapsetdirttapset}/%{_build_cpu}
 %endif
 
 # not-duplicated scriptlets for normal/debug packages
@@ -564,7 +547,7 @@ exit 0
 }
 
 %define files_jre() %{expand:
-%{_datadir}/icons/hicolor/*x*/apps/java-%{javaver}.png
+%{_datadir}/icons/hicolor/*x*/apps/java-%{javaver}-%{origin}.png
 %{_datadir}/applications/*policytool%{?1}.desktop
 %{_jvmdir}/%{sdkdir -- %{?1}}/jre/lib/%{archinstall}/libjsoundalsa.so
 %{_jvmdir}/%{sdkdir -- %{?1}}/jre/lib/%{archinstall}/libsplashscreen.so
@@ -758,6 +741,9 @@ exit 0
 %{_jvmdir}/%{sdkdir -- %{?1}}/include/*
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/%{archinstall}
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/ct.sym
+%if %{with_systemtap}
+%{_jvmdir}/%{sdkdir -- %{?1}}/tapset
+%endif
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/ir.idl
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/jconsole.jar
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/orb.idl
@@ -799,10 +785,9 @@ exit 0
 %{_mandir}/man1/xjc-%{uniquesuffix -- %{?1}}.1*
 %if %{with_systemtap}
 %dir %{tapsetroot}
+%dir %{tapsetdirttapset}
 %dir %{tapsetdir}
-%{tapsetdir}/*%{version}-%{release}.%{_arch}%{?1}.stp
-%dir %{_jvmdir}/%{sdkdir -- %{?1}}/tapset
-%{_jvmdir}/%{sdkdir -- %{?1}}/tapset/*.stp
+%{tapsetdir}/*%{_arch}%{?1}.stp
 %endif
 }
 
@@ -813,7 +798,7 @@ exit 0
 
 %define files_src() %{expand:
 %defattr(-,root,root,-)
-%doc README.src
+%doc README.md
 %{_jvmdir}/%{sdkdir -- %{?1}}/src.zip
 }
 
@@ -855,8 +840,6 @@ Provides: jre-%{javaver}-%{origin}%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-%{javaver}%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-%{origin}%{?1} = %{epoch}:%{version}-%{release}
 Provides: java%{?1} = %{epoch}:%{javaver}
-# Standard JPackage extensions provides.
-Provides: java-fonts%{?1} = %{epoch}:%{version}
 }
 
 %define java_headless_rpo() %{expand:
@@ -896,17 +879,6 @@ Provides: java-%{javaver}-%{origin}-headless%{?1} = %{epoch}:%{version}-%{releas
 Provides: java-%{javaver}-headless%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-%{origin}-headless%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-headless%{?1} = %{epoch}:%{javaver}
-# Standard JPackage extensions provides.
-Provides: jndi%{?1} = %{epoch}:%{version}
-Provides: jndi-ldap%{?1} = %{epoch}:%{version}
-Provides: jndi-cos%{?1} = %{epoch}:%{version}
-Provides: jndi-rmi%{?1} = %{epoch}:%{version}
-Provides: jndi-dns%{?1} = %{epoch}:%{version}
-Provides: jaas%{?1} = %{epoch}:%{version}
-Provides: jsse%{?1} = %{epoch}:%{version}
-Provides: jce%{?1} = %{epoch}:%{version}
-Provides: jdbc-stdext%{?1} = 4.1
-Provides: java-sasl%{?1} = %{epoch}:%{version}
 
 # https://bugzilla.redhat.com/show_bug.cgi?id=1312019
 Provides: /usr/bin/jjs
@@ -991,7 +963,7 @@ Provides: java-%{javaver}-%{origin}-accessibility = %{epoch}:%{version}-%{releas
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}.%{buildver}
-Release: 7%{?dist}
+Release: 0%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons
 # and this change was brought into RHEL-4. java-1.5.0-ibm packages
 # also included the epoch in their virtual provides. This created a
@@ -1019,31 +991,23 @@ Group:   Development/Languages
 License:  ASL 1.1 and ASL 2.0 and BSD and BSD with advertising and GPL+ and GPLv2 and GPLv2 with exceptions and IJG and LGPLv2+ and MIT and MPLv2.0 and Public Domain and W3C and zlib
 URL:      http://openjdk.java.net/
 
-# aarch64-port now contains integration forest of both aarch64 and normal jdk
-# Source from upstream OpenJDK8 project. To regenerate, use
-# VERSION=%%{revision} FILE_NAME_ROOT=%%{project}-%%{repo}-${VERSION}
-# REPO_ROOT=<path to checked-out repository> generate_source_tarball.sh
-# where the source is obtained from http://hg.openjdk.java.net/%%{project}/%%{repo}
-Source0: %{project}-%{repo}-%{revision}.tar.xz
-
 # Shenandoah HotSpot
 # aarch64-port/jdk8u-shenandoah contains an integration forest of
 # OpenJDK 8u, the aarch64 port and Shenandoah
 # To regenerate, use:
 # VERSION=%%{shenandoah_revision}
 # FILE_NAME_ROOT=%%{shenandoah_project}-%%{shenandoah_repo}-${VERSION}
-# REPO_ROOT=<path to checked-out repository> REPOS=hotspot generate_source_tarball.sh
+# REPO_ROOT=<path to checked-out repository> generate_source_tarball.sh
 # where the source is obtained from http://hg.openjdk.java.net/%%{project}/%%{repo}
-Source1: %{shenandoah_project}-%{shenandoah_repo}-%{shenandoah_revision}.tar.xz
+Source0: %{shenandoah_project}-%{shenandoah_repo}-%{shenandoah_revision}.tar.xz
 
 # Custom README for -src subpackage
-Source2:  README.src
+Source2:  README.md
 
-# Use 'generate_tarballs.sh' to generate the following tarballs
-# They are based on code contained in the IcedTea project (3.x)
 
-# Systemtap tapsets. Zipped up to keep it small
-Source8: systemtap-tapset-3.6.0pre02.tar.xz
+# run update_systemtap.sh to regenerate or update systemtap sources
+# update_package.sh contains hard-coded repos, revisions, tags, and projects to regenerate the source archives
+Source8: systemtap_3.2_tapsets_hg-icedtea8-9d464368e06d.tar.xz
 
 # Desktop files. Adapted from IcedTea
 Source9: jconsole.desktop.in
@@ -1184,8 +1148,6 @@ Patch575: 8197981-pr3548.patch
 Patch576: 8064786-pr3599.patch
 # 8062808, PR3548: Turn on the -Wreturn-type warning
 Patch577: 8062808-pr3548.patch
-# 8165852, PR3468: (fs) Mount point not found for a file which is present in overlayfs
-Patch210: 8165852-pr3468.patch
 # 8207057, PR3613: Enable debug information for assembly code files
 Patch206: 8207057-pr3613-hotspot-assembler-debuginfo.patch
 
@@ -1212,11 +1174,6 @@ Patch565: 8185723-pr3553.patch
 Patch566: 8186461-pr3557.patch
 # 8201509, PR3579: Zero: S390 31bit atomic_copy64 inline assembler is wrong
 Patch569: 8201509-pr3579.patch
-# 8165489, PR3589: Missing G1 barrier in Unsafe_GetObjectVolatile
-Patch570: 8165489-pr3589.patch
-# 8196516, RH1538767: libfontmanager.so needs to be built with LDFLAGS so as to allow
-#                     linking with unresolved symbols.
-Patch531: 8196516-pr3523-rh1538767.patch
 # 8075942, PR3602: ArrayIndexOutOfBoundsException in sun.java2d.pisces.Dasher.goTo
 Patch578: 8075942-pr3602-rh1582032.patch
 # 8203182, PR3603: Release session if initialization of SunPKCS11 Signature fails
@@ -1249,6 +1206,12 @@ Patch534: always_assumemp.patch
 Patch539: pr2888.patch
 # PR3575, RH1567204: System cacerts database handling should not affect jssecacerts
 Patch540: pr3575-rh1567204.patch
+
+# Shenandoah fixes
+# PR3619: Shenandoah broken on s390
+Patch582: pr3619.patch
+# PR3620: Shenandoah broken on ppc64
+Patch583: pr3620.patch
 
 #############################################
 #
@@ -1467,7 +1430,7 @@ BuildArch: noarch
 %{java_javadoc_rpo -- %{debug_suffix_unquoted}}
 
 %description javadoc-zip-debug
-The OpenJDK API documentation compressed in single archive %{for_debug}.
+The %{origin_nice} %{majorver} API documentation compressed in single archive %{for_debug}.
 %endif
 
 
@@ -1560,17 +1523,7 @@ if [ $prioritylength -ne 7 ] ; then
  exit 14
 fi
 # For old patches
-ln -s openjdk jdk8
-%if %{use_shenandoah_hotspot}
-# On Shenandoah-supported architectures, replace HotSpot with
-# the Shenandoah version
-pushd openjdk
-tar -xf %{SOURCE1}
-rm -rf hotspot
-mv openjdk/hotspot .
-rm -rf openjdk
-popd
-%endif
+ln -s %{top_level_dir_name} jdk8
 
 cp %{SOURCE2} .
 
@@ -1595,7 +1548,6 @@ sh %{SOURCE12}
 %patch204
 %patch205
 %patch206
-%patch210
 
 %patch300
 
@@ -1644,9 +1596,6 @@ sh %{SOURCE12}
 %patch530
 %patch538
 %patch560
-pushd openjdk/jdk
-%patch531 -p1
-popd
 %patch561
 %patch562
 %patch563
@@ -1677,17 +1626,15 @@ popd
 %patch534
 %endif
 
-# Shenandoah-only patches
-%if %{use_shenandoah_hotspot}
-%else
-%patch570
-%endif
+# Shenandoah patches
+%patch582
+%patch583
 
 %patch1000
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
-tar -x -I xz -f %{SOURCE8}
+tar --strip-components=1 -x -I xz -f %{SOURCE8}
 %if %{include_debug_build}
 cp -r tapset tapset%{debug_suffix}
 %endif
@@ -1695,17 +1642,17 @@ cp -r tapset tapset%{debug_suffix}
 
 for suffix in %{build_loop} ; do
   for file in "tapset"$suffix/*.in; do
-    OUTPUT_FILE=`echo $file | sed -e s:%{javaver}\.stp\.in$:%{version}-%{release}.%{_arch}.stp:g`
-    sed -e s:@ABS_SERVER_LIBJVM_SO@:%{_jvmdir}/%{sdkdir -- $suffix}/jre/lib/%{archinstall}/server/libjvm.so:g $file > $file.1
+    OUTPUT_FILE=`echo $file | sed -e "s:\.stp\.in$:%{version}-%{release}.%{_arch}.stp:g"`
+    sed -e "s:@ABS_SERVER_LIBJVM_SO@:%{_jvmdir}/%{sdkdir -- $suffix}/jre/lib/%{archinstall}/server/libjvm.so:g" $file > $file.1
 # TODO find out which architectures other than i686 have a client vm
 %ifarch %{ix86}
-    sed -e s:@ABS_CLIENT_LIBJVM_SO@:%{_jvmdir}/%{sdkdir -- $suffix}/jre/lib/%{archinstall}/client/libjvm.so:g $file.1 > $OUTPUT_FILE
+    sed -e "s:@ABS_CLIENT_LIBJVM_SO@:%{_jvmdir}/%{sdkdir -- $suffix}/jre/lib/%{archinstall}/client/libjvm.so:g" $file.1 > $OUTPUT_FILE
 %else
-    sed -e '/@ABS_CLIENT_LIBJVM_SO@/d' $file.1 > $OUTPUT_FILE
+    sed -e "/@ABS_CLIENT_LIBJVM_SO@/d" $file.1 > $OUTPUT_FILE
 %endif
-    sed -i -e s:@ABS_JAVA_HOME_DIR@:%{_jvmdir}/%{sdkdir -- $suffix}:g $OUTPUT_FILE
-    sed -i -e s:@INSTALL_ARCH_DIR@:%{archinstall}:g $OUTPUT_FILE
-    sed -i -e s:@prefix@:%{_jvmdir}/%{sdkdir -- $suffix}/:g $OUTPUT_FILE
+    sed -i -e "s:@ABS_JAVA_HOME_DIR@:%{_jvmdir}/%{sdkdir -- $suffix}:g" $OUTPUT_FILE
+    sed -i -e "s:@INSTALL_ARCH_DIR@:%{archinstall}:g" $OUTPUT_FILE
+    sed -i -e "s:@prefix@:%{_jvmdir}/%{sdkdir -- $suffix}/:g" $OUTPUT_FILE
   done
 done
 # systemtap tapsets ends
@@ -1727,7 +1674,7 @@ done
 done
 
 # Setup nss.cfg
-sed -e s:@NSS_LIBDIR@:%{NSS_LIBDIR}:g %{SOURCE11} > nss.cfg
+sed -e "s:@NSS_LIBDIR@:%{NSS_LIBDIR}:g" %{SOURCE11} > nss.cfg
 
 
 %build
@@ -1793,7 +1740,7 @@ bash ../../configure \
     --with-libjpeg=system \
     --with-giflib=system \
     --with-libpng=system \
-    --with-lcms=bundled \
+    --with-lcms=system \
     --with-stdc++lib=dynamic \
     --with-extra-cxxflags="$EXTRA_CPP_FLAGS" \
     --with-extra-cflags="$EXTRA_CFLAGS" \
@@ -1970,28 +1917,20 @@ mkdir -p $RPM_BUILD_ROOT%{_jvmdir}/%{jredir -- $suffix}/lib/%{archinstall}/clien
    tapsetFiles=`ls *.stp`
   popd
   install -d -m 755 $RPM_BUILD_ROOT%{tapsetdir}
-  pushd $RPM_BUILD_ROOT%{tapsetdir}
-    RELATIVE=$(%{abs2rel} %{_jvmdir}/%{sdkdir -- $suffix}/tapset %{tapsetdir})
-    for name in $tapsetFiles ; do
-      targetName=`echo $name | sed "s/.stp/$suffix.stp/"`
-      ln -sf $RELATIVE/$name $targetName
-    done
-  popd
+  for name in $tapsetFiles ; do
+    targetName=`echo $name | sed "s/.stp/$suffix.stp/"`
+    ln -sf %{_jvmdir}/%{sdkdir -- $suffix}/tapset/$name $RPM_BUILD_ROOT%{tapsetdir}/$targetName
+  done
 %endif
 
-  # Remove empty cacerts database.
+  # Remove empty cacerts database
   rm -f $RPM_BUILD_ROOT%{_jvmdir}/%{jredir -- $suffix}/lib/security/cacerts
-  # Install cacerts symlink needed by some apps which hardcode the path.
+  # Install cacerts symlink needed by some apps which hardcode the path
   pushd $RPM_BUILD_ROOT%{_jvmdir}/%{jredir -- $suffix}/lib/security
-    RELATIVE=$(%{abs2rel} %{_sysconfdir}/pki/java \
-      %{_jvmdir}/%{jredir -- $suffix}/lib/security)
-    ln -sf $RELATIVE/cacerts .
+      ln -sf /etc/pki/java/cacerts .
   popd
 
-  # Install JCE policy symlinks.
-  install -d -m 755 $RPM_BUILD_ROOT%{_jvmprivdir}/%{uniquesuffix -- $suffix}/jce/vanilla
-
-  # Install versioned symlinks.
+  # Install versioned symlinks
   pushd $RPM_BUILD_ROOT%{_jvmdir}
     ln -sf %{jredir -- $suffix} %{jrelnk -- $suffix}
   popd
@@ -2031,7 +1970,7 @@ cp -a %{buildoutputdir -- $suffix}/bundles/jdk-%{javaver}_%{updatever}$suffix-%{
 for s in 16 24 32 48 ; do
   install -D -p -m 644 \
     openjdk/jdk/src/solaris/classes/sun/awt/X11/java-icon${s}.png \
-    $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/${s}x${s}/apps/java-%{javaver}.png
+    $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/${s}x${s}/apps/java-%{javaver}-%{origin}.png
 done
 
 # Install desktop files
@@ -2327,6 +2266,47 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Mon Aug 27 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.181.b13-9
+- Adjust system jpeg patch, system-libjpeg.patch, so as to filter
+  -Wl,--as-needed. Resolves RHBZ#1622186.
+
+* Mon Aug 27 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.181.b13-8
+- Adjust system NSS patch, pr1983-jdk.patch, so as to filter
+  -Wl,--as-needed. Resolves RHBZ#1622186.
+
+* Thu Aug 23 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.181.b15-0
+- Move to single OpenJDK tarball build, based on aarch64/shenandoah-jdk8u.
+- Update to aarch64-shenandoah-jdk8u181-b15.
+- Drop 8165489-pr3589.patch which was only applied to aarch64/jdk8u builds.
+- Move buildver to where it should be in the OpenJDK version.
+- Split ppc64 Shenandoah fix into separate patch file with its own bug ID (PR3620).
+- Update pr3539-rh1548475.patch to apply after 8187045.
+- Resolves: rhbz#1594249
+
+* Sat Aug 11 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.181-8.b13
+- Remove unneeded functions from ppc shenandoahBarrierSet.
+- Resolves: rhbz#1594249
+
+* Wed Aug 08 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.181-8.b13
+- Add missing shenandoahBarrierSet implementation for ppc64{be,le}.
+- Resolves: rhbz#1594249
+
+* Tue Aug 07 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.181-8.b13
+- Fix wrong format specifiers in Shenandoah code.
+- Resolves: rhbz#1594249
+
+* Tue Aug 07 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.181-8.b13
+- Avoid changing variable types to fix size_t, at least for now.
+- Resolves: rhbz#1594249
+
+* Tue Aug 07 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.181-8.b13
+- More size_t fixes for Shenandoah.
+- Resolves: rhbz#1594249
+
+* Fri Aug 03 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.181-8.b13
+- Add additional s390 size_t case for Shenandoah.
+- Resolves: rhbz#1594249
+
 * Wed Aug 01 2018 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.181.b13-7
 - build number moved from release to version
 
@@ -2346,6 +2326,12 @@ require "copy_jdk_configs.lua"
 * Mon Jul 02 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.172-12.b11
 - Fix requires/provides filters for internal libs. See
   RHBZ#1590796
+
+* Mon Jun 25 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.172-12.b11
+- Add hook to show hs_err*.log files on failures.
+
+* Wed Jun 20 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.172-11.b11
+- Expose release/slowdebug builds being produced via conditionals.
 
 * Wed Jun 20 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.172-11.b11
 - Add additional fix (PR3601) to fix -Wreturn-type failures introduced by 8061651
@@ -2410,6 +2396,30 @@ require "copy_jdk_configs.lua"
 - patch104 pr3458-rh1540242.patch
 - patch209 8035496-hotspot.patch
 - patch700 pr3573.patch
+- fixed issue with atkwrapper wrongly palced broken symlink
+- fixed libjvm path for system tap
+- returned patch104 pr3458-rh1540242.patch
+
+* Wed Jun 06 2018 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.172-2.b11
+- quoted sed expressions, changed possibly confussing # by @
+- added vendor(origin) into icons
+- removed last trace of relative symlinks
+- added BuildRequires of javapackages-tools to fix build failure after Requires change to javapackages-filesystem
+- aligning with java-openjdk in fedora:
+- slowdebug instead simply debug subpackage
+- purged provides
+- many macros renamed
+- typos correction
+- bumped jstack (may be wrong)
+- fixed issue with atkwrapper wrongly palced broken symlink
+
+* Wed Jun 06 2018 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.172-1.b11
+- updated to u172-b11
+- removed patches:
+- patch207 8200556-pr3566.patch
+- patch104 pr3458-rh1540242.patch
+- patch209 8035496-hotspot.patch
+- patch700 pr3573.patch
 
 * Thu May 17 2018 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.171-6.b10
 - Move to javapackages-filesystem over javapackages-tools
@@ -2445,6 +2455,11 @@ require "copy_jdk_configs.lua"
 * Mon Apr 02 2018 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.162-5.b12
 - Cleanup from previous commit.
 - Remove unused upstream patch 8167200.hotspotAarch64.patch.
+
+* Thu Mar 29 2018 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.162-4.b12
+- added experimental %%define _find_debuginfo_opts -g
+- in attempt to fix https://bugzilla.redhat.com/show_bug.cgi?id=1520879
+- no idea what will come out
 
 * Thu Mar 29 2018 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.162-3.b12
 - returned patch562 rhbz_1540242.patch
