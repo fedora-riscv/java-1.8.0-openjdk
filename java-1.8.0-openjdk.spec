@@ -1096,10 +1096,6 @@ Patch106: pr3519.patch
 # Patches which need backporting to 8u
 #
 #############################################
-# S8073139, RH1191652; fix name of ppc64le architecture
-Patch601: 8073139-rh1191652-root.patch
-Patch602: 8073139-rh1191652-jdk.patch
-Patch603: 8073139-rh1191652-hotspot-aarch64.patch
 # 8044235: src.zip should include all sources
 Patch7:   8044235-include-all-srcs.patch
 # S8074839, PR2462: Resolve disabled warnings for libunpack and the unpack200 binary
@@ -1195,6 +1191,10 @@ Patch100: 8201495-s390-java-opts.patch
 Patch508: 8150954-pr2866-rh1176206-screenshot-xcomposite-jdk.patch
 # 8165852, PR3468: (fs) Mount point not found for a file which is present in overlayfs
 Patch210: 8165852-pr3468.patch
+# S8073139, RH1191652; fix name of ppc64le architecture
+Patch601: 8073139-rh1191652-root.patch
+Patch602: 8073139-rh1191652-jdk.patch
+Patch603: 8073139-rh1191652-hotspot-aarch64.patch
 
 #############################################
 #
