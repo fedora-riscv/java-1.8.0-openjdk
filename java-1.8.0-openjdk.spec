@@ -1291,7 +1291,7 @@ BuildRequires: systemtap-sdt-devel
 %{java_rpo %{nil}}
 
 %description
-The %{origin_nice} runtime environment.
+The %{origin_nice} runtime environment %{majorver}.
 
 %if %{include_debug_build}
 %package debug
@@ -1300,7 +1300,7 @@ Group:   Development/Languages
 
 %{java_rpo -- %{debug_suffix_unquoted}}
 %description debug
-The %{origin_nice} runtime environment.
+The %{origin_nice} runtime environment %{majorver}.
 %{debug_warning}
 %endif
 
@@ -1317,7 +1317,7 @@ The %{origin_nice} runtime environment %{majorver} without audio and video suppo
 
 %if %{include_debug_build}
 %package headless-debug
-Summary: %{origin_nice} Runtime Environment %{debug_on}
+Summary: %{origin_nice} Runtime Environment %{majorver} %{debug_on}
 Group:   Development/Languages
 
 %{java_headless_rpo -- %{debug_suffix_unquoted}}
@@ -1688,7 +1688,7 @@ for file in %{SOURCE9} %{SOURCE10} ; do
     sed    -e  "s:@JAVA_HOME@:%{sdkbindir -- $suffix}:g" $file > $OUTPUT_FILE
     sed -i -e  "s:@JRE_HOME@:%{jrebindir -- $suffix}:g" $OUTPUT_FILE
     sed -i -e  "s:@ARCH@:%{version}-%{release}.%{_arch}$suffix:g" $OUTPUT_FILE
-    sed -i -e  "s:@JAVA_MAJOR_VERSION@:%{majorver}:g" $OUTPUT_FILE
+    sed -i -e  "s:@JAVA_MAJOR_VERSION@:%{javaver}:g" $OUTPUT_FILE
     sed -i -e  "s:@JAVA_VENDOR@:%{origin}:g" $OUTPUT_FILE
 done
 done
