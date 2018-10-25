@@ -1124,9 +1124,6 @@ Patch575: 8197981-pr3548.patch
 Patch576: 8064786-pr3599.patch
 # 8062808, PR3548: Turn on the -Wreturn-type warning
 Patch577: 8062808-pr3548.patch
-# 8207057, PR3613: Enable debug information for assembly code files
-Patch206: 8207057-pr3613-assembler-debuginfo-hotspot.patch
-Patch207: 8207057-pr3613-assembler-debuginfo-root.patch
 # s390: JDK-8203030, Type fixing for s390
 Patch102: 8203030-size_t-fixes.patch
 # 8210761: libjsig is being compiled without optimization
@@ -1189,6 +1186,9 @@ Patch100: 8201495-s390-java-opts.patch
 #############################################
 # S8150954, RH1176206, PR2866: Taking screenshots on x11 composite desktop produces wrong result
 Patch508: 8150954-pr2866-rh1176206-screenshot-xcomposite-jdk.patch
+# 8207057, PR3613: Enable debug information for assembly code files
+Patch206: 8207057-pr3613-assembler-debuginfo-hotspot.patch
+Patch207: 8207057-pr3613-assembler-debuginfo-root.patch
 # 8165852, PR3468: (fs) Mount point not found for a file which is present in overlayfs
 Patch210: 8165852-pr3468.patch
 # S8073139, RH1191652; fix name of ppc64le architecture
