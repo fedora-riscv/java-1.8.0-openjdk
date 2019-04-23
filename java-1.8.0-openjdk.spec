@@ -1135,8 +1135,6 @@ Patch540: pr3575-rh1567204-system_cacerts_database_handling_no_longer_affect_jss
 Patch300: pr3183-rh1340845-support_fedora_rhel_system_crypto_policy.patch
 # PR3655: Allow use of system crypto policy to be disabled by the user
 Patch301: pr3655-toggle_system_crypto_policy.patch
-# JDK-8219772: EXTRA_CFLAGS not being picked up for assembler files
-Patch110: jdk8219772-extra_c_cxx_flags_not_picked_for_assembler_source.patch
 
 #############################################
 #
