@@ -1120,6 +1120,8 @@ Patch110: jdk8219772-extra_c_cxx_flags_not_picked_for_assembler_source.patch
 # JDK-8218811: replace open by os::open in hotspot coding
 # This fixes a GCC 10 build issue
 Patch111: jdk8218811-perfMemory_linux.patch
+# JDK-8241296: Segfault in JNIHandleBlock::oops_do()
+Patch112: jdk8241296-jnihandleblock_segfault.patch
 
 #############################################
 #
@@ -1545,6 +1547,7 @@ sh %{SOURCE12}
 %patch577
 %patch110
 %patch111
+%patch112
 
 # RPM-only fixes
 %patch539
@@ -2188,6 +2191,10 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Fri Mar 20 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.242.b08-1
+- Backport JDK-8241296 to fix segfaults when active_handles is NULL
+- Resolves: rhbz#1813550
+
 * Fri Mar 13 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.242.b08-1
 - Sync SystemTap & desktop files with upstream IcedTea release 3.15.0, removing previous workarounds
 
