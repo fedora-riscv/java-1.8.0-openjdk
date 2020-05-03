@@ -218,7 +218,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global shenandoah_project	aarch64-port
 %global shenandoah_repo		jdk8u-shenandoah
-%global shenandoah_revision    	aarch64-shenandoah-jdk8u242-b08
+%global shenandoah_revision    	aarch64-shenandoah-jdk8u252-b01
 # Define old aarch64/jdk8u tree variables for compatibility
 %global project         %{shenandoah_project}
 %global repo            %{shenandoah_repo}
@@ -234,12 +234,12 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      1
+%global rpmrelease      0
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
 # - N%%{?extraver}{?dist} for GA releases
-%global is_ga           1
+%global is_ga           0
 %if %{is_ga}
 %global milestone          fcs
 %global milestone_version  %{nil}
@@ -1127,8 +1127,6 @@ Patch539: pr2888-openjdk_should_check_for_system_cacerts_database_eg_etc_pki_jav
 Patch400: pr3183-rh1340845-support_fedora_rhel_system_crypto_policy.patch
 # PR3655: Allow use of system crypto policy to be disabled by the user
 Patch401: pr3655-toggle_system_crypto_policy.patch
-# JDK-8219772: EXTRA_CFLAGS not being picked up for assembler files
-Patch110: jdk8219772-extra_c_cxx_flags_not_picked_for_assembler_source.patch
 
 #############################################
 #
@@ -1548,7 +1546,6 @@ sh %{SOURCE12}
 %patch574
 %patch575
 %patch577
-%patch110
 
 # RPM-only fixes
 %patch539
@@ -1630,14 +1627,13 @@ export CFLAGS="$CFLAGS -mieee"
 EXTRA_CFLAGS="%ourcppflags -Wno-error"
 EXTRA_CPP_FLAGS="%ourcppflags"
 # Fixes annocheck warnings in assembler files due to missing build notes
-EXTRA_CPP_FLAGS="$EXTRA_CPP_FLAGS -Wa,--generate-missing-build-notes=yes"
-EXTRA_CFLAGS="$EXTRA_CFLAGS -Wa,--generate-missing-build-notes=yes"
+EXTRA_ASFLAGS="${EXTRA_CFLAGS} -Wa,--generate-missing-build-notes=yes"
 
 %ifarch %{power64} ppc
 # fix rpmlint warnings
 EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-strict-aliasing"
 %endif
-export EXTRA_CFLAGS
+export EXTRA_CFLAGS EXTRA_ASFLAGS
 
 (cd %{top_level_dir_name}/common/autoconf
  bash ./autogen.sh
@@ -1676,6 +1672,7 @@ bash ../../configure \
     --with-stdc++lib=dynamic \
     --with-extra-cxxflags="$EXTRA_CPP_FLAGS" \
     --with-extra-cflags="$EXTRA_CFLAGS" \
+    --with-extra-asflags="$EXTRA_ASFLAGS" \
     --with-extra-ldflags="%{ourldflags}" \
     --with-num-cores="$NUM_PROC"
 
@@ -2191,6 +2188,13 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Sun May 03 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b01-0.1.ea
+- Update to aarch64-shenandoah-jdk8u252-b01.
+- Switch to EA mode.
+- Adjust JDK-8199936/PR3533 patch following JDK-8227397 configure change
+- Make use of --with-extra-asflags introduced in jdk8u252-b01.
+- Drop obsolete local patch, JDK-8219772, now that ASFLAGS are properly handled.
+
 * Fri Mar 13 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.242.b08-1
 - Sync SystemTap & desktop files with upstream IcedTea release 3.15.0, removing previous workarounds
 
