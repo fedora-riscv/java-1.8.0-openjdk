@@ -2209,7 +2209,7 @@ require "copy_jdk_configs.lua"
 
 %changelog
 * Sun May 03 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b09-0
-- Update to aarch64-shenandoah-jdk8u242-b09.
+- Update to aarch64-shenandoah-jdk8u252-b09.
 - Switch to GA mode for final release.
 - Add release notes.
 - Adjust PR2974/RH1337583 & PR3083/RH1346460 following context changes in JDK-8230978
