@@ -218,7 +218,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global shenandoah_project	aarch64-port
 %global shenandoah_repo		jdk8u-shenandoah
-%global shenandoah_revision    	aarch64-shenandoah-jdk8u252-b01
+%global shenandoah_revision    	aarch64-shenandoah-jdk8u252-b09
 # Define old aarch64/jdk8u tree variables for compatibility
 %global project         %{shenandoah_project}
 %global repo            %{shenandoah_repo}
@@ -239,7 +239,7 @@
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
 # - N%%{?extraver}{?dist} for GA releases
-%global is_ga           0
+%global is_ga           1
 %if %{is_ga}
 %global milestone          fcs
 %global milestone_version  %{nil}
@@ -584,6 +584,7 @@ exit 0
 %license %{buildoutputdir -- %{?1}}/images/%{jdkimage}/jre/ASSEMBLY_EXCEPTION
 %license %{buildoutputdir -- %{?1}}/images/%{jdkimage}/jre/LICENSE
 %license %{buildoutputdir -- %{?1}}/images/%{jdkimage}/jre/THIRD_PARTY_README
+%doc %{_defaultdocdir}/%{uniquejavadocdir -- %{?1}}/NEWS
 %dir %{_jvmdir}/%{sdkdir -- %{?1}}
 %{_jvmdir}/%{jrelnk -- %{?1}}
 %dir %{_jvmdir}/%{jredir -- %{?1}}/lib/security
@@ -1049,6 +1050,9 @@ Source0: %{shenandoah_project}-%{shenandoah_repo}-%{shenandoah_revision}.tar.xz
 
 # Custom README for -src subpackage
 Source2:  README.md
+
+# Release notes
+Source7: NEWS
 
 # Use 'icedtea_sync.sh' to update the following
 # They are based on code contained in the IcedTea project (3.x).
@@ -1897,6 +1901,11 @@ if ! echo $suffix | grep -q "debug" ; then
   cp -a %{buildoutputdir -- $suffix}/bundles/$built_doc_archive  $RPM_BUILD_ROOT%{_javadocdir}/%{uniquejavadocdir -- $suffix}.zip
 fi
 
+# Install release notes
+commondocdir=${RPM_BUILD_ROOT}%{_defaultdocdir}/%{uniquejavadocdir -- $suffix}
+install -d -m 755 ${commondocdir}
+cp -a %{SOURCE7} ${commondocdir}
+
 # Install icons and menu entries
 for s in 16 24 32 48 ; do
   install -D -p -m 644 \
@@ -2188,6 +2197,12 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Sun May 03 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b09-0
+- Update to aarch64-shenandoah-jdk8u242-b09.
+- Switch to GA mode for final release.
+- Add release notes.
+- Adjust PR2974/RH1337583 & PR3083/RH1346460 following context changes in JDK-8230978
+
 * Sun May 03 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b01-0.1.ea
 - Update to aarch64-shenandoah-jdk8u252-b01.
 - Switch to EA mode.
