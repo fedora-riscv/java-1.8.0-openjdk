@@ -231,7 +231,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      0
+%global rpmrelease      1
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -1171,13 +1171,15 @@ Patch203: jdk8042159-allow_using_system_installed_lcms2.patch
 
 #############################################
 #
-# Patches appearing in 8u222
+# Patches appearing in 8u262
 #
 # This section includes patches which are present
 # in the listed OpenJDK 8u release and should be
 # able to be removed once that release is out
 # and used by this RPM.
 #############################################
+# JDK-8233880: Support compilers with multi-digit major version numbers
+Patch579: jdk8233880-compiler_versioning.patch
 
 #############################################
 #
@@ -1615,11 +1617,10 @@ export ARCH_DATA_MODEL=64
 export CFLAGS="$CFLAGS -mieee"
 %endif
 
-GCC_10_OPT_DISABLE="-fno-tree-pta -fno-tree-scev-cprop -fno-tree-sink -fno-tree-slp-vectorize -fno-tree-slsr -fno-tree-sra -fno-tree-switch-conversion -fno-tree-tail-merge -fno-tree-ter -fno-tree-vrp -fno-unit-at-a-time -fno-unswitch-loops -fno-vect-cost-model -fno-version-loops-for-strides -fno-tree-coalesce-vars -fno-tree-copy-prop -fno-tree-dce -fno-tree-dominator-opts -fno-tree-dse -fno-tree-forwprop -fno-tree-fre -fno-tree-loop-distribute-patterns -fno-tree-loop-distribution -fno-tree-loop-vectorize -fno-tree-partial-pre -fno-tree-phiprop -fno-tree-pre"
 # We use ourcppflags because the OpenJDK build seems to
 # pass EXTRA_CFLAGS to the HotSpot C++ compiler...
-EXTRA_CFLAGS="%ourcppflags -Wno-error -fcommon $GCC_10_OPT_DISABLE"
-EXTRA_CPP_FLAGS="%ourcppflags -fcommon $GCC_10_OPT_DISABLE"
+EXTRA_CFLAGS="%ourcppflags -Wno-error -fcommon"
+EXTRA_CPP_FLAGS="%ourcppflags -fcommon"
 # Fixes annocheck warnings in assembler files due to missing build notes
 EXTRA_ASFLAGS="${EXTRA_CFLAGS} -Wa,--generate-missing-build-notes=yes"
 
@@ -2208,6 +2209,12 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Sun May 17 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b09-1
+- Backport JDK-8233880 to fix version detection of GCC 10.
+- Remove compiler flags used to disable GCC optimisations. This is now
+  resolved by -fno-delete-null-pointer-checks and -fno-lifetime-dse being turned
+  on in the upstream build, after GCC >= 6 is detected.
+
 * Sun May 03 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b09-0
 - Update to aarch64-shenandoah-jdk8u252-b09.
 - Switch to GA mode for final release.
