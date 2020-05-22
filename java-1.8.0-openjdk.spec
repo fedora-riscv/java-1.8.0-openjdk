@@ -60,6 +60,7 @@
 %global multilib_arches %{power64} sparc64 x86_64
 %global jit_arches      %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64}
 %global sa_arches       %{ix86} x86_64 sparcv9 sparc64 %{aarch64}
+%global jfr_arches      x86_64 sparcv9 sparc64 %{aarch64} %{power64}
 
 # By default, we build a debug build during main build on JIT architectures
 %if %{with slowdebug}
@@ -215,7 +216,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global shenandoah_project	aarch64-port
 %global shenandoah_repo		jdk8u-shenandoah
-%global shenandoah_revision    	aarch64-shenandoah-jdk8u252-b09
+%global shenandoah_revision    	aarch64-shenandoah-jdk8u262-b10
 # Define old aarch64/jdk8u tree variables for compatibility
 %global project         %{shenandoah_project}
 %global repo            %{shenandoah_repo}
@@ -231,7 +232,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      2
+%global rpmrelease      0
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -420,6 +421,9 @@ alternatives \\
   --slave %{_bindir}/jconsole jconsole %{sdkbindir -- %{?1}}/jconsole \\
   --slave %{_bindir}/jdb jdb %{sdkbindir -- %{?1}}/jdb \\
   --slave %{_bindir}/jdeps jdeps %{sdkbindir -- %{?1}}/jdeps \\
+%ifarch %{jfr_arches}
+  --slave %{_bindir}/jfr jfr %{sdkbindir -- %{?1}}/jfr \\
+%endif
   --slave %{_bindir}/jhat jhat %{sdkbindir -- %{?1}}/jhat \\
   --slave %{_bindir}/jinfo jinfo %{sdkbindir -- %{?1}}/jinfo \\
   --slave %{_bindir}/jmap jmap %{sdkbindir -- %{?1}}/jmap \\
@@ -677,7 +681,7 @@ exit 0
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libnet.so
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libnio.so
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libnpt.so
-%ifarch x86_64  %{ix86} %{aarch64}
+%ifarch %{sa_arches}
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libsaproc.so
 %endif
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libsctp.so
@@ -718,12 +722,20 @@ exit 0
 %{_jvmdir}/%{jredir -- %{?1}}/lib/ext/sunjce_provider.jar
 %{_jvmdir}/%{jredir -- %{?1}}/lib/ext/sunpkcs11.jar
 %{_jvmdir}/%{jredir -- %{?1}}/lib/ext/zipfs.jar
+%ifarch %{jfr_arches}
+%{_jvmdir}/%{jredir -- %{?1}}/lib/jfr.jar
+%{_jvmdir}/%{jredir -- %{?1}}/lib/jfr/default.jfc
+%{_jvmdir}/%{jredir -- %{?1}}/lib/jfr/profile.jfc
+%endif
 
 %dir %{_jvmdir}/%{jredir -- %{?1}}/lib/images
 %dir %{_jvmdir}/%{jredir -- %{?1}}/lib/images/cursors
 %dir %{_jvmdir}/%{jredir -- %{?1}}/lib/management
 %dir %{_jvmdir}/%{jredir -- %{?1}}/lib/cmm
 %dir %{_jvmdir}/%{jredir -- %{?1}}/lib/ext
+%ifarch %{jfr_arches}
+%dir %{_jvmdir}/%{jredir -- %{?1}}/lib/jfr
+%endif
 }
 
 %define files_devel() %{expand:
@@ -751,6 +763,9 @@ exit 0
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jconsole
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jdb
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jdeps
+%ifarch %{jfr_arches}
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jfr
+%endif
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jhat
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jinfo
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jjs
@@ -891,8 +906,9 @@ Provides: java%{?1} = %{epoch}:%{version}-%{release}
 Requires: ca-certificates
 # Require javapackages-filesystem for ownership of /usr/lib/jvm/
 Requires: javapackages-filesystem
-# Require zone-info data provided by tzdata-java sub-package
-Requires: tzdata-java >= 2015d
+# Require zoneinfo data provided by tzdata-java subpackage.
+# 2020a required as of JDK-8243541
+Requires: tzdata-java >= 2020a
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
 # tool to copy jdk's configs - should be Recommends only, but then only dnf/yum enforce it,
@@ -1034,7 +1050,7 @@ URL:      http://openjdk.java.net/
 # FILE_NAME_ROOT=%%{shenandoah_project}-%%{shenandoah_repo}-${VERSION}
 # REPO_ROOT=<path to checked-out repository> generate_source_tarball.sh
 # where the source is obtained from http://hg.openjdk.java.net/%%{project}/%%{repo}
-Source0: %{shenandoah_project}-%{shenandoah_repo}-%{shenandoah_revision}.tar.xz
+Source0: %{shenandoah_project}-%{shenandoah_repo}-%{shenandoah_revision}-4curve.tar.xz
 
 # Custom README for -src subpackage
 Source2:  README.md
@@ -1170,7 +1186,8 @@ Patch102: jdk8203030-zero_s390_31_bit_size_t_type_conflicts_in_shared_code.patch
 # 8035341: Allow using a system installed libpng
 Patch202: jdk8035341-allow_using_system_installed_libpng.patch
 # 8042159: Allow using a system-installed lcms2
-Patch203: jdk8042159-allow_using_system_installed_lcms2.patch
+Patch203: jdk8042159-allow_using_system_installed_lcms2-root.patch
+Patch204: jdk8042159-allow_using_system_installed_lcms2-jdk.patch
 
 #############################################
 #
@@ -1181,8 +1198,6 @@ Patch203: jdk8042159-allow_using_system_installed_lcms2.patch
 # able to be removed once that release is out
 # and used by this RPM.
 #############################################
-# JDK-8233880: Support compilers with multi-digit major version numbers
-Patch579: jdk8233880-compiler_versioning.patch
 
 #############################################
 #
@@ -1260,7 +1275,8 @@ BuildRequires: java-1.8.0-openjdk-devel
 %ifnarch %{jit_arches}
 BuildRequires: libffi-devel
 %endif
-BuildRequires: tzdata-java >= 2015d
+# 2020a required as of JDK-8243541
+BuildRequires: tzdata-java >= 2020a
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
@@ -1509,6 +1525,7 @@ sh %{SOURCE12}
 %patch201
 %patch202
 %patch203
+%patch204
 
 # System security policy fixes
 %patch400
@@ -1544,7 +1561,6 @@ sh %{SOURCE12}
 %patch575
 %patch577
 %patch111
-%patch579
 
 # RPM-only fixes
 %patch539
@@ -1606,6 +1622,7 @@ sed -e "s:@NSS_LIBDIR@:%{NSS_LIBDIR}:g" %{SOURCE11} > nss.cfg
 
 
 %build
+
 # How many CPU's do we have?
 export NUM_PROC=%(/usr/bin/getconf _NPROCESSORS_ONLN 2> /dev/null || :)
 export NUM_PROC=${NUM_PROC:-1}
@@ -1652,6 +1669,9 @@ function buildjdk() {
     pushd ${outputdir}
 
     bash ${top_srcdir_abs_path}/configure \
+%ifarch %{jfr_arches}
+    --enable-jfr \
+%endif
 %ifnarch %{jit_arches}
     --with-jvm-variants=zero \
 %endif
@@ -2213,6 +2233,28 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Sun Jul 12 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b10-0
+- Update to aarch64-shenandoah-jdk8u262-b10.
+- Update release notes for 8u262 release.
+- Remove issues in NEWS file duplicated between 8u252 & 8u262 releases.
+- Update generate_source_tarball.sh script to use the PR3756 patch and retain the secp256k1 curve.
+- Add the -'4curve' suffix to the tarball name.
+- Adjust JDK-8143245/PR3548 patch following context changes due to JDK-8203287 for JFR
+- Adjust RH1648644 following context changes due to introduction of JFR packages
+- Split JDK-8042159 patch into per-repo patches as upstream.
+- Update JDK-8042159 JDK patch to apply after JDK-8238002 changes to Awt2dLibraries.gmk
+- Remove JDK-8244461 & JDK-8233880 backports included upstream in 8u262-b03.
+- Enable JFR in our builds, ahead of upstream default.
+- Only enable JFR for JIT builds, as it is not supported with Zero.
+- Turn off JFR on x86 for now due to assert(SerializePageShiftCount == count) crash.
+- Explicitly list jfr.jar, default.jfc & profile.jfc in the spec file.
+- Introduce jfr_arches for architectures which support JFR.
+- Fix typo in jfr_arches which leads to ppc64 being wrongly excluded.
+- Add jfr binary to devel package and alternatives set
+- With JDK-8248399 fixed, a broken jfr binary is no longer installed on architectures without JFR.
+- Require tzdata 2020a so system tzdata matches resource updates in b07
+- Use sa_arches for libsaproc.so inclusion.
+
 * Wed May 27 2020 Jiri Andrlik <jandrlik@redhat.com> - 1:1.8.0.252.b09-2
 - backports of provides fixes from master
 
