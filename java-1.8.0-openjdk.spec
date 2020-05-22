@@ -1541,6 +1541,7 @@ sh %{SOURCE12}
 %patch575
 %patch577
 %patch111
+%patch579
 
 # RPM-only fixes
 %patch539
@@ -2209,6 +2210,9 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Fri May 22 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b09-1
+- Actually apply the JDK-8233880 patch...
+
 * Sun May 17 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b09-1
 - Backport JDK-8233880 to fix version detection of GCC 10.
 - Remove compiler flags used to disable GCC optimisations. This is now
