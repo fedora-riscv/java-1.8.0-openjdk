@@ -232,7 +232,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      0
+%global rpmrelease      1
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -253,6 +253,23 @@
 %global priority        %(TIP=1800%{updatever};  echo ${TIP/tip/999})
 
 %global javaver         1.%{majorver}.0
+
+# Define what url should JVM offer in case of a crash report
+# order may be important, epel may have rhel declared
+%if 0%{?epel}
+%global bugs  https://bugzilla.redhat.com/enter_bug.cgi?product=Fedora%20EPEL&component=%{name}&version=epel%{epel}
+%else
+%if 0%{?fedora}
+# Does not work for rawhide, keeps the version field empty
+%global bugs  https://bugzilla.redhat.com/enter_bug.cgi?product=Fedora&component=%{name}&version=%{fedora}
+%else
+%if 0%{?rhel}
+%global bugs  https://bugzilla.redhat.com/enter_bug.cgi?product=Red%20Hat%20Enterprise%20Linux%20%{rhel}&component=%{name}
+%else
+%global bugs  https://bugzilla.redhat.com/enter_bug.cgi
+%endif
+%endif
+%endif
 
 # parametrized macros are order-sensitive
 %global compatiblename  %{name}
@@ -1679,6 +1696,10 @@ function buildjdk() {
     --with-milestone=%{milestone} \
     --with-update-version=%{updatever} \
     --with-build-number=%{buildver} \
+    --with-vendor-name="Red Hat, Inc" \
+    --with-vendor-url="https://www.redhat.com/" \
+    --with-vendor-bug-url="%{bugs}" \
+    --with-vendor-vm-bug-url="%{bugs}" \
     --with-boot-jdk=${buildjdk} \
     --with-debug-level=${debuglevel} \
     --enable-unlimited-crypto \
@@ -2233,6 +2254,10 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Mon Jul 13 2020 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.262.b10-1
+- Set vendor property and vendor URLs
+- Made URLs to be preconfigured by OS
+
 * Sun Jul 12 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b10-0
 - Update to aarch64-shenandoah-jdk8u262-b10.
 - Update release notes for 8u262 release.
