@@ -96,9 +96,9 @@
 %endif
 
 %if %{bootstrap_build}
-%global release_targets bootcycle-images zip-docs
+%global release_targets bootcycle-images docs-zip
 %else
-%global release_targets images zip-docs
+%global release_targets images docs-zip
 %endif
 # No docs nor bootcycle for debug builds
 %global debug_targets images
@@ -219,7 +219,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global shenandoah_project	aarch64-port
 %global shenandoah_repo		jdk8u-shenandoah
-%global shenandoah_revision    	aarch64-shenandoah-jdk8u265-b01
+%global shenandoah_revision    	aarch64-shenandoah-jdk8u272-b10
 # Define old aarch64/jdk8u tree variables for compatibility
 %global project         %{shenandoah_project}
 %global repo            %{shenandoah_repo}
@@ -235,7 +235,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      1
+%global rpmrelease      0
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -927,8 +927,8 @@ Requires: ca-certificates
 # Require javapackages-filesystem for ownership of /usr/lib/jvm/
 Requires: javapackages-filesystem
 # Require zoneinfo data provided by tzdata-java subpackage.
-# 2020a required as of JDK-8243541
-Requires: tzdata-java >= 2020a
+# 2020b required as of JDK-8254177 in October CPU
+Requires: tzdata-java >= 2020b
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
 # tool to copy jdk's configs - should be Recommends only, but then only dnf/yum enforce it,
@@ -1188,8 +1188,6 @@ Patch107: s390-8214206_fix.patch
 # S8074839, PR2462: Resolve disabled warnings for libunpack and the unpack200 binary
 # This fixes printf warnings that lead to build failure with -Werror=format-security from optflags
 Patch502: pr2462-resolve_disabled_warnings_for_libunpack_and_the_unpack200_binary.patch
-# S8154313: Generated javadoc scattered all over the place
-Patch578: jdk8154313-generated_javadoc_scattered_all_over_the_place.patch
 # PR3591: Fix for bug 3533 doesn't add -mstackrealign to JDK code
 Patch571: jdk8199936-pr3591-enable_mstackrealign_on_x86_linux_as_well_as_x86_mac_os_x_jdk.patch
 # 8143245, PR3548: Zero build requires disabled warnings
@@ -1208,13 +1206,15 @@ Patch204: jdk8042159-allow_using_system_installed_lcms2-jdk.patch
 
 #############################################
 #
-# Patches appearing in 8u222
+# Patches appearing in 8u282
 #
 # This section includes patches which are present
 # in the listed OpenJDK 8u release and should be
 # able to be removed once that release is out
 # and used by this RPM.
 #############################################
+# JDK-8254177: (tz) Upgrade time-zone data to tzdata2020b
+Patch13: jdk8254177-tzdata2020b.patch
 
 #############################################
 #
@@ -1292,7 +1292,8 @@ BuildRequires: java-1.8.0-openjdk-devel
 %ifnarch %{jit_arches}
 BuildRequires: libffi-devel
 %endif
-# 2020a required as of JDK-8243541
+# 2020b required as of JDK-8254177 in October CPU
+# Temporarily roll back tzdata build requirement while tzdata update is still in testing
 BuildRequires: tzdata-java >= 2020a
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
@@ -1567,7 +1568,6 @@ sh %{SOURCE12}
 %patch502
 %patch504
 %patch512
-%patch578
 %patch523
 %patch528
 %patch529
@@ -1577,6 +1577,7 @@ sh %{SOURCE12}
 %patch574
 %patch575
 %patch577
+%patch13
 
 # RPM-only fixes
 %patch539
@@ -1681,13 +1682,21 @@ fi
 
 # Variable used in hs_err hook on build failures
 top_dir_abs_path=$(pwd)/%{top_level_dir_name}
+buildjdk=/usr/lib/jvm/java-openjdk
+outputdir=%{buildoutputdir -- $suffix}
 
-mkdir -p %{buildoutputdir -- $suffix}
-pushd %{buildoutputdir -- $suffix}
+echo "Checking build JDK ${buildjdk} is operational..."
+${buildjdk}/bin/java -version
+echo "Building 8u%{updatever}-%{buildver}, milestone %{milestone}"
+
+mkdir -p ${outputdir}
+pushd ${outputdir}
 
 bash ../../configure \
 %ifarch %{jfr_arches}
     --enable-jfr \
+%else
+    --disable-jfr \
 %endif
 %ifnarch %{jit_arches}
     --with-jvm-variants=zero \
@@ -1696,11 +1705,11 @@ bash ../../configure \
     --with-milestone=%{milestone} \
     --with-update-version=%{updatever} \
     --with-build-number=%{buildver} \
-    --with-vendor-name="Red Hat, Inc" \
+    --with-vendor-name="Red Hat, Inc." \
     --with-vendor-url="https://www.redhat.com/" \
     --with-vendor-bug-url="%{bugs}" \
     --with-vendor-vm-bug-url="%{bugs}" \
-    --with-boot-jdk=/usr/lib/jvm/java-openjdk \
+    --with-boot-jdk=${buildjdk} \
     --with-debug-level=$debugbuild \
     --enable-unlimited-crypto \
     --with-zlib=system \
@@ -2232,6 +2241,26 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Wed Oct 21 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b10-0
+- Update to aarch64-shenandoah-jdk8u272-b10.
+- Test build JDK is usable by running 'java -version'.
+- JFR must now be explicitly disabled when unwanted (e.g. x86), following switch of upstream default.
+- Remove JDK-8154313 backport now applied upstream.
+- Change target from 'zip-docs' to 'docs-zip', which is the naming used upstream.
+- Update tarball generation script to use PR3795, following inclusion of JDK-8177334
+- Add additional s390 size_t case in g1ConcurrentMarkObjArrayProcessor.cpp introduced by JDK-8057003
+- Add additional s390 log2_intptr case in shenandoahUtils.cpp introduced by JDK-8245464
+- Update tarball generation script to use PR3799, following inclusion of JDK-8245468 (TLSv1.3)
+- Update release notes for 8u272 release.
+- Add backport of JDK-8254177 to update to tzdata 2020b
+- Require tzdata 2020b due to resource changes in JDK-8254177
+- Temporarily roll back tzdata build requirement while tzdata update is still in testing
+- Adjust JDK-8062808/PR3548 following constantPool.hpp context change in JDK-8243302
+- Adjust PR3593 following g1StringDedupTable.cpp context change in JDK-8240124 & JDK-8244955
+
+* Wed Aug 05 2020 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.272.b01-0.1.ea
+- Fix vendor name to include '.': Red Hat, Inc => Red Hat, Inc.
+
 * Mon Jul 27 2020 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.265.b01-1
 - ASSEMBLY_EXCEPTION LICENSE THIRD_PARTY_README moved to fully versioned dirs
 
