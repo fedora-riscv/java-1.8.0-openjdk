@@ -1432,7 +1432,8 @@ BuildRequires: java-1.8.0-openjdk-devel
 BuildRequires: libffi-devel
 %endif
 # 2020b required as of JDK-8254177 in October CPU
-BuildRequires: tzdata-java >= 2020b
+# Temporarily roll back tzdata build requirement while tzdata update is still in testing
+BuildRequires: tzdata-java >= 2020a
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
@@ -2406,6 +2407,9 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Wed Oct 21 03:06:25 UTC 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b10-0
+- Temporarily roll back tzdata build requirement while tzdata update is still in testing
+
 * Sat Oct 17 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b10-0
 - Update to aarch64-shenandoah-jdk8u272-b10.
 - Switch to GA mode for final release.
