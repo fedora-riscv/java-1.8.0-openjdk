@@ -2256,8 +2256,6 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
-* Wed Oct 21 03:06:25 UTC 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b10-0
-- Temporarily roll back tzdata build requirement while tzdata update is still in testing
 * Mon Nov 23 2020 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.275.b01-1
 - Created copy of java as alt-java and adapted alternatives and man pages
 
