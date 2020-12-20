@@ -4,18 +4,20 @@
 #
 # Examples:
 #
-# Produce release *and* slowdebug builds on x86_64 (default):
+# Produce release, fastdebug *and* slowdebug builds on x86_64 (default):
 # $ rpmbuild -ba java-1.8.0-openjdk.spec
 #
 # Produce only release builds (no slowdebug builds) on x86_64:
-# $ rpmbuild -ba java-1.8.0-openjdk.spec --without slowdebug
+# $ rpmbuild -ba java-1.8.0-openjdk.spec --without slowdebug --without fastdebug
 #
 # Only produce a release build on x86_64:
-# $ fedpkg mockbuild --without slowdebug
+# $ fedpkg mockbuild --without slowdebug --without fastdebug
 #
 # Only produce a debug build on x86_64:
 # $ fedpkg local --without release
 #
+# Enable fastdebug builds by default on relevant arches.
+%bcond_without fastdebug
 # Enable slowdebug builds by default on relevant arches.
 %bcond_without slowdebug
 # Enable release builds by default on relevant arches.
@@ -32,13 +34,16 @@
 # See https://github.com/rpm-software-management/rpm/issues/127 to comments at  "pmatilai commented on Aug 18, 2017"
 # (initiated in https://bugzilla.redhat.com/show_bug.cgi?id=1482192)
 %global debug_suffix_unquoted -slowdebug
+%global fastdebug_suffix_unquoted -fastdebug
 # quoted one for shell operations
 %global debug_suffix "%{debug_suffix_unquoted}"
+%global fastdebug_suffix "%{fastdebug_suffix_unquoted}"
 %global normal_suffix ""
 
-# if you want only debug build but providing java build only normal build but set normalbuild_parameter
-%global debug_warning This package has full debug on. Install only in need and remove asap.
+%global debug_warning This package is unoptimised with full debugging. Install only as needed and remove ASAP.
 %global debug_on with full debug on
+%global fastdebug_warning This package is optimised with full debugging. Install only as needed and remove ASAP.
+%global for_fastdebug_on with minimal debug on
 %global for_debug for packages with debug on
 
 %if %{with release}
@@ -48,26 +53,57 @@
 %endif
 
 %if %{include_normal_build}
-%global build_loop1 %{normal_suffix}
+%global normal_build %{normal_suffix}
 %else
-%global build_loop1 %{nil}
+%global normal_build %{nil}
 %endif
+
+# We have hardcoded list of files, which  is appearing in alternatives, and in files
+# in alternatives those are slaves and master, very often triplicated by man pages
+# in files all masters and slaves are ghosted
+# the ghosts are here to allow installation via query like `dnf install /usr/bin/java`
+# you can list those files, with appropriate sections: cat *.spec | grep -e --install -e --slave -e post_ 
+# TODO - fix those hardcoded lists via single list
+# Those files must *NOT* be ghosted for *slowdebug* packages
+# FIXME - if you are moving jshell or jlink or similar, always modify all three sections
+# you can check via headless and devels:
+#    rpm -ql --noghost java-11-openjdk-headless-11.0.1.13-8.fc29.x86_64.rpm  | grep bin
+# == rpm -ql           java-11-openjdk-headless-slowdebug-11.0.1.13-8.fc29.x86_64.rpm  | grep bin
+# != rpm -ql           java-11-openjdk-headless-11.0.1.13-8.fc29.x86_64.rpm  | grep bin
+# similarly for other %%{_jvmdir}/{jre,java} and %%{_javadocdir}/{java,java-zip}
+%define is_release_build() %( if [ "%{?1}" == "%{debug_suffix_unquoted}" ]; then echo "0" ; else echo "1"; fi )
+
+# while JDK is a techpreview(is_system_jdk=0), some provides are turned off. Once jdk stops to be an techpreview, move it to 1
+# as sytem JDK, we mean any JDK which can run whole system java stack without issues (like bytecode issues, module issues, dependencies...)
+%global is_system_jdk 1
 
 %global aarch64         aarch64 arm64 armv8
 # we need to distinguish between big and little endian PPC64
 %global ppc64le         ppc64le
 %global ppc64be         ppc64 ppc64p7
+# Set of architectures which support multiple ABIs
 %global multilib_arches %{power64} sparc64 x86_64
-%global jit_arches      %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64}
+# Set of architectures for which we build debug builds
+%global debug_arches    %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64}
+# Set of architectures with a Just-In-Time (JIT) compiler
+%global jit_arches      %{debug_arches}
+# Set of architectures which support SystemTap tapsets
+%global systemtap_arches %{jit_arches}
+%global fastdebug_arches x86_64 ppc64le aarch64
+# Set of architectures which support the serviceability agent
 %global sa_arches       %{ix86} x86_64 sparcv9 sparc64 %{aarch64}
+# Set of architectures which support class data sharing
+# See https://bugzilla.redhat.com/show_bug.cgi?id=513605
+# MetaspaceShared::generate_vtable_methods is not implemented for the PPC JIT
+%global share_arches    %{ix86} x86_64 sparcv9 sparc64 %{aarch64}
 %global jfr_arches      x86_64 sparcv9 sparc64 %{aarch64} %{power64}
+
 # Set of architectures for which alt-java has SSB mitigation
 %global ssbd_arches x86_64
 
 # By default, we build a debug build during main build on JIT architectures
 %if %{with slowdebug}
-%ifarch %{jit_arches}
-%ifnarch %{arm}
+%ifarch %{debug_arches}
 %global include_debug_build 1
 %else
 %global include_debug_build 0
@@ -75,36 +111,49 @@
 %else
 %global include_debug_build 0
 %endif
+
+# By default, we build a fastdebug build during main build only on fastdebug architectures
+%if %{with fastdebug}
+%ifarch %{fastdebug_arches}
+%global include_fastdebug_build 1
 %else
-%global include_debug_build 0
+%global include_fastdebug_build 0
+%endif
+%else
+%global include_fastdebug_build 0
 %endif
 
 %if %{include_debug_build}
-%global build_loop2 %{debug_suffix}
+%global slowdebug_build %{debug_suffix}
 %else
-%global build_loop2 %{nil}
+%global slowdebug_build %{nil}
 %endif
 
-# if you disable both builds, then the build fails
-%global build_loop  %{build_loop1} %{build_loop2}
-# note: that order: normal_suffix debug_suffix, in case of both enabled
-# is expected in one single case at the end of the build
-%global rev_build_loop  %{build_loop2} %{build_loop1}
-
-%ifarch %{jit_arches}
-%global bootstrap_build 1
+%if %{include_fastdebug_build}
+%global fastdebug_build %{fastdebug_suffix}
 %else
-%global bootstrap_build 1
+%global fastdebug_build %{nil}
 %endif
+%global bootstrap_build 1
+
+# If you disable both builds, then the build fails
+# Note that the debug build requires the normal build for docs
+%global build_loop %{normal_build} %{fastdebug_build} %{slowdebug_build}
+# Test slowdebug first as it provides the best diagnostics
+%global rev_build_loop  %{slowdebug_build} %{fastdebug_build} %{normal_build}
 
 %global bootstrap_targets images
 %global release_targets images docs-zip
 # No docs nor bootcycle for debug builds
 %global debug_targets images
 
+# Disable LTO as this causes build failures at the moment.
+# See RHBZ#1861401
+%define _lto_cflags %{nil}
+
 # Filter out flags from the optflags macro that cause problems with the OpenJDK build
-# We filter out -Wall which will otherwise cause HotSpot to produce hundreds of thousands of warnings (100+mb logs)
 # We filter out -O flags so that the optimization of HotSpot is not lowered from O3 to O2
+# We filter out -Wall which will otherwise cause HotSpot to produce hundreds of thousands of warnings (100+mb logs)
 # We replace it with -Wformat (required by -Werror=format-security) and -Wno-cpp to avoid FORTIFY_SOURCE warnings
 # We filter out -fexceptions as the HotSpot build explicitly does -fno-exceptions and it's otherwise the default for C++
 %global ourflags %(echo %optflags | sed -e 's|-Wall|-Wformat -Wno-cpp|' | sed -r -e 's|-O[0-9]*||')
@@ -125,64 +174,69 @@
 %global NSSSOFTOKN_BUILDTIME_VERSION %(if [ "x%{NSSSOFTOKN_BUILDTIME_NUMBER}" == "x" ] ; then echo "" ;else echo ">= %{NSSSOFTOKN_BUILDTIME_NUMBER}" ;fi)
 %global NSS_BUILDTIME_VERSION %(if [ "x%{NSS_BUILDTIME_NUMBER}" == "x" ] ; then echo "" ;else echo ">= %{NSS_BUILDTIME_NUMBER}" ;fi)
 
-
-# Fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349.
-# See also https://bugzilla.redhat.com/show_bug.cgi?id=1590796
-# as to why some libraries *cannot* be excluded. In particular,
-# these are:
-# libjsig.so, libjava.so, libjawt.so, libjvm.so and libverify.so
-%global _privatelibs libatk-wrapper[.]so.*|libattach[.]so.*|libawt_headless[.]so.*|libawt[.]so.*|libawt_xawt[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libhprof[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas_unix[.]so.*|libjava_crw_demo[.]so.*|libjavajpeg[.]so.*|libjdwp[.]so.*|libjli[.]so.*|libjsdt[.]so.*|libjsoundalsa[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libnpt[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libsplashscreen[.]so.*|libsunec[.]so.*|libunpack[.]so.*|libzip[.]so.*|lib[.]so\\(SUNWprivate_.*
-
-%global __provides_exclude ^(%{_privatelibs})$
-%global __requires_exclude ^(%{_privatelibs})$
-
 # In some cases, the arch used by the JDK does
 # not match _arch.
 # Also, in some cases, the machine name used by SystemTap
-# does not match that given by _build_cpu
+# does not match that given by _target_cpu
 %ifarch x86_64
 %global archinstall amd64
+%global stapinstall x86_64
 %endif
 %ifarch ppc
 %global archinstall ppc
+%global stapinstall powerpc
 %endif
 %ifarch %{ppc64be}
 %global archinstall ppc64
+%global stapinstall powerpc
 %endif
 %ifarch %{ppc64le}
 %global archinstall ppc64le
+%global stapinstall powerpc
 %endif
 %ifarch %{ix86}
 %global archinstall i386
+%global stapinstall i386
 %endif
 %ifarch ia64
 %global archinstall ia64
+%global stapinstall ia64
 %endif
 %ifarch s390
 %global archinstall s390
+%global stapinstall s390
 %endif
 %ifarch s390x
 %global archinstall s390x
+%global stapinstall s390
 %endif
 %ifarch %{arm}
 %global archinstall arm
+%global stapinstall arm
 %endif
 %ifarch %{aarch64}
 %global archinstall aarch64
+%global stapinstall arm64
 %endif
 # 32 bit sparc, optimized for v9
 %ifarch sparcv9
 %global archinstall sparc
+%global stapinstall %{_target_cpu}
 %endif
 # 64 bit sparc
 %ifarch sparc64
 %global archinstall sparcv9
+%global stapinstall %{_target_cpu}
 %endif
-%ifnarch %{jit_arches}
-%global archinstall %{_arch}
+# Need to support noarch for srpm build
+%ifarch noarch
+%global archinstall %{nil}
+%global stapinstall %{nil}
 %endif
 
-%ifarch %{jit_arches}
+
+
+%ifarch %{systemtap_arches}
 %global with_systemtap 1
 %else
 %global with_systemtap 0
@@ -211,7 +265,10 @@
 %global with_openjfx_binding 0
 %endif
 
-# Standard JPackage naming and versioning defines.
+# Define IcedTea version used for SystemTap tapsets and desktop file
+%global icedteaver      3.15.0
+
+# Standard JPackage naming and versioning defines
 %global origin          openjdk
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
@@ -223,8 +280,7 @@
 %global project         %{shenandoah_project}
 %global repo            %{shenandoah_repo}
 %global revision        %{shenandoah_revision}
-# Define IcedTea version used for SystemTap tapsets and desktop files
-%global icedteaver      3.15.0
+
 
 # e.g. aarch64-shenandoah-jdk8u212-b04-shenandoah-merge-2019-04-30 -> aarch64-shenandoah-jdk8u212-b04
 %global version_tag     %(VERSION=%{revision}; echo ${VERSION%%-shenandoah-merge*})
@@ -234,7 +290,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      3
+%global rpmrelease      4
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -251,8 +307,13 @@
 %global extraver .%{milestone}
 %global eaprefix 0.
 %endif
-# priority must be 7 digits in total. The expression is workarounding tip
-%global priority        %(TIP=1800%{updatever};  echo ${TIP/tip/999})
+# priority must be 7 digits in total; up to openjdk 1.8
+%if %is_system_jdk
+%global priority        1800%{updatever}
+%else
+# for techpreview, using 1, so slowdebugs can have 0
+%global priority        0000001
+%endif
 
 %global javaver         1.%{majorver}.0
 
@@ -276,7 +337,7 @@
 # parametrized macros are order-sensitive
 %global compatiblename  %{name}
 %global fullversion     %{compatiblename}-%{version}-%{release}
-# images stub
+# images directories from upstream build
 %global jdkimage       j2sdk-image
 # output dir stub
 %define buildoutputdir() %{expand:build/jdk8.build%{?1}}
@@ -284,6 +345,27 @@
 %define uniquejavadocdir()    %{expand:%{fullversion}%{?1}}
 # main id and dir of this jdk
 %define uniquesuffix()        %{expand:%{fullversion}.%{_arch}%{?1}}
+
+#################################################################
+# fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349
+#         https://bugzilla.redhat.com/show_bug.cgi?id=1590796#c14
+#         https://bugzilla.redhat.com/show_bug.cgi?id=1655938
+%global _privatelibs libatk-wrapper[.]so.*|libattach[.]so.*|libawt_headless[.]so.*|libawt[.]so.*|libawt_xawt[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libhprof[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas_unix[.]so.*|libjava_crw_demo[.]so.*|libjavajpeg[.]so.*|libjdwp[.]so.*|libjli[.]so.*|libjsdt[.]so.*|libjsoundalsa[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libnpt[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libsplashscreen[.]so.*|libsunec[.]so.*|libunpack[.]so.*|libzip[.]so.*|lib[.]so\\(SUNWprivate_.*
+%global _publiclibs libjawt[.]so.*|libjava[.]so.*|libjvm[.]so.*|libverify[.]so.*|libjsig[.]so.*
+%if %is_system_jdk
+%global __provides_exclude ^(%{_privatelibs})$
+%global __requires_exclude ^(%{_privatelibs})$
+# Never generate lib-style provides/requires for slowdebug packages
+%global __provides_exclude_from ^.*/%{uniquesuffix -- %{debug_suffix_unquoted}}/.*$
+%global __requires_exclude_from ^.*/%{uniquesuffix -- %{debug_suffix_unquoted}}/.*$
+%global __provides_exclude_from ^.*/%{uniquesuffix -- %{fastdebug_suffix_unquoted}}/.*$
+%global __requires_exclude_from ^.*/%{uniquesuffix -- %{fastdebug_suffix_unquoted}}/.*$
+%else
+# Don't generate provides/requires for JDK provided shared libraries at all.
+%global __provides_exclude ^(%{_privatelibs}|%{_publiclibs})$
+%global __requires_exclude ^(%{_privatelibs}|%{_publiclibs})$
+%endif
+
 
 %global etcjavasubdir     %{_sysconfdir}/java/java-%{javaver}-%{origin}
 %define etcjavadir()      %{expand:%{etcjavasubdir}/%{uniquesuffix -- %{?1}}}
@@ -306,10 +388,10 @@
 # and 32 bit architectures we place the tapsets under the arch
 # specific dir (note that systemtap will only pickup the tapset
 # for the primary arch for now). Systemtap uses the machine name
-# aka build_cpu as architecture specific directory name.
+# aka target_cpu as architecture specific directory name.
 %global tapsetroot /usr/share/systemtap
 %global tapsetdirttapset %{tapsetroot}/tapset/
-%global tapsetdir %{tapsetdirttapset}/%{_build_cpu}
+%global tapsetdir %{tapsetdirttapset}/%{stapinstall}
 %endif
 
 # not-duplicated scriptlets for normal/debug packages
@@ -324,12 +406,8 @@ exit 0
 
 
 %define post_headless() %{expand:
-%ifarch %{jit_arches}
-# MetaspaceShared::generate_vtable_methods not implemented for PPC JIT
-%ifnarch %{power64}
-# see https://bugzilla.redhat.com/show_bug.cgi?id=513605
+%ifarch %{share_arches}
 %{jrebindir -- %{?1}}/java -Xshare:dump >/dev/null 2>/dev/null
-%endif
 %endif
 
 PRIORITY=%{priority}
@@ -598,6 +676,11 @@ exit 0
 %{_jvmdir}/%{sdkdir -- %{?1}}/jre/lib/%{archinstall}/libawt_xawt.so
 %{_jvmdir}/%{sdkdir -- %{?1}}/jre/lib/%{archinstall}/libjawt.so
 %{_jvmdir}/%{sdkdir -- %{?1}}/jre/bin/policytool
+%if %is_system_jdk
+%if %{is_release_build -- %{?1}}
+%ghost %{_bindir}/policytool
+%endif
+%endif
 }
 
 
@@ -662,11 +745,9 @@ exit 0
 %{_mandir}/man1/policytool-%{uniquesuffix -- %{?1}}.1*
 %{_jvmdir}/%{jredir -- %{?1}}/lib/security/nss.cfg
 %config(noreplace) %{etcjavadir -- %{?1}}/lib/security/nss.cfg
-%ifarch %{jit_arches}
-%ifnarch %{power64}
+%ifarch %{share_arches}
 %attr(444, root, root) %ghost %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/server/classes.jsa
 %attr(444, root, root) %ghost %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/client/classes.jsa
-%endif
 %endif
 %dir %{etcjavasubdir}
 %dir %{etcjavadir -- %{?1}}
@@ -760,6 +841,22 @@ exit 0
 %dir %{_jvmdir}/%{jredir -- %{?1}}/lib/ext
 %ifarch %{jfr_arches}
 %dir %{_jvmdir}/%{jredir -- %{?1}}/lib/jfr
+%endif
+%if %is_system_jdk
+%if %{is_release_build -- %{?1}}
+%ghost %{_bindir}/java
+%ghost %{_jvmdir}/jre
+# https://bugzilla.redhat.com/show_bug.cgi?id=1312019
+%ghost %{_bindir}/jjs
+%ghost %{_bindir}/keytool
+%ghost %{_bindir}/orbd
+%ghost %{_bindir}/pack200
+%ghost %{_bindir}/rmid
+%ghost %{_bindir}/rmiregistry
+%ghost %{_bindir}/servertool
+%ghost %{_bindir}/tnameserv
+%ghost %{_bindir}/unpack200
+%endif
 %endif
 }
 
@@ -869,11 +966,60 @@ exit 0
 %dir %{tapsetdir}
 %{tapsetdir}/*%{_arch}%{?1}.stp
 %endif
+%if %is_system_jdk
+%if %{is_release_build -- %{?1}}
+%ghost %{_jvmdir}/java
+%ghost %{_bindir}/appletviewer
+%ghost %{_bindir}/clhsdb
+%ghost %{_bindir}/extcheck
+%ghost %{_bindir}/hsdb
+%ghost %{_bindir}/idlj
+%ghost %{_bindir}/jar
+%ghost %{_bindir}/jarsigner
+%ghost %{_bindir}/java
+%ghost %{_bindir}/java-rmi.cgi
+%ghost %{_bindir}/javac
+%ghost %{_bindir}/javadoc
+%ghost %{_bindir}/javah
+%ghost %{_bindir}/javap
+%ghost %{_bindir}/jcmd
+%ghost %{_bindir}/jconsole
+%ghost %{_bindir}/jdb
+%ghost %{_bindir}/jdeps
+%ghost %{_bindir}/jhat
+%ghost %{_bindir}/jinfo
+%ghost %{_bindir}/jjs
+%ghost %{_bindir}/jmap
+%ghost %{_bindir}/jps
+%ghost %{_bindir}/jrunscript
+%ghost %{_bindir}/jsadebugd
+%ghost %{_bindir}/jstack
+%ghost %{_bindir}/jstat
+%ghost %{_bindir}/jstatd
+%ghost %{_bindir}/keytool
+%ghost %{_bindir}/native2ascii
+%ghost %{_bindir}/orbd
+%ghost %{_bindir}/pack200
+%ghost %{_bindir}/policytool
+%ghost %{_bindir}/rmic
+%ghost %{_bindir}/rmid
+%ghost %{_bindir}/rmiregistry
+%ghost %{_bindir}/schemagen
+%ghost %{_bindir}/serialver
+%ghost %{_bindir}/servertool
+%ghost %{_bindir}/tnameserv
+%ghost %{_bindir}/unpack200
+%ghost %{_bindir}/wsgen
+%ghost %{_bindir}/wsimport
+%ghost %{_bindir}/xjc
+%endif
+%endif
 }
+
 
 %define files_demo() %{expand:
 %defattr(-,root,root,-)
-%license %{buildoutputdir -- %{?1}}/images/%{jdkimage}/jre/LICENSE
+%license %{_jvmdir}/%{jredir -- %{?1}}/LICENSE
 }
 
 %define files_src() %{expand:
@@ -885,13 +1031,23 @@ exit 0
 %define files_javadoc() %{expand:
 %defattr(-,root,root,-)
 %doc %{_javadocdir}/%{uniquejavadocdir -- %{?1}}
-%license %{buildoutputdir -- %{?1}}/images/%{jdkimage}/jre/LICENSE
+%license %{_jvmdir}/%{jredir -- %{?1}}/LICENSE
+%if %is_system_jdk
+%if %{is_release_build -- %{?1}}
+%ghost %{_javadocdir}/java
+%endif
+%endif
 }
 
 %define files_javadoc_zip() %{expand:
 %defattr(-,root,root,-)
 %doc %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip
-%license %{buildoutputdir -- %{?1}}/images/%{jdkimage}/jre/LICENSE
+%license %{_jvmdir}/%{jredir -- %{?1}}/LICENSE
+%if %is_system_jdk
+%if %{is_release_build -- %{?1}}
+%ghost %{_javadocdir}/java-zip
+%endif
+%endif
 }
 
 %define files_accessibility() %{expand:
@@ -915,26 +1071,29 @@ OrderWithRequires: %{name}-headless%{?1}%{?_isa} = %{epoch}:%{version}-%{release
 Recommends: gtk2%{?_isa}
 %endif
 
-Provides: java-%{javaver}-%{origin} = %{epoch}:%{version}-%{release}
+Provides: java-%{javaver}-%{origin}%{?1} = %{epoch}:%{version}-%{release}
 
 # Standard JPackage base provides
-Provides: jre%{?1} = %{epoch}:%{version}-%{release}
-Provides: jre-%{origin}%{?1} = %{epoch}:%{version}-%{release}
 Provides: jre-%{javaver}%{?1} = %{epoch}:%{version}-%{release}
 Provides: jre-%{javaver}-%{origin}%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-%{javaver}%{?1} = %{epoch}:%{version}-%{release}
+%if %is_system_jdk
 Provides: java-%{origin}%{?1} = %{epoch}:%{version}-%{release}
+Provides: jre-%{origin}%{?1} = %{epoch}:%{version}-%{release}
 Provides: java%{?1} = %{epoch}:%{version}-%{release}
+Provides: jre%{?1} = %{epoch}:%{version}-%{release}
+%endif
 }
 
 %define java_headless_rpo() %{expand:
 # Require /etc/pki/java/cacerts
 Requires: ca-certificates
-# Require javapackages-filesystem for ownership of /usr/lib/jvm/
+# Require javapackages-filesystem for ownership of /usr/lib/jvm/ and macros
 Requires: javapackages-filesystem
 # Require zoneinfo data provided by tzdata-java subpackage.
 # 2020b required as of JDK-8254177 in October CPU
 Requires: tzdata-java >= 2020b
+# for support of kernel stream control
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
 # tool to copy jdk's configs - should be Recommends only, but then only dnf/yum enforce it,
@@ -954,18 +1113,16 @@ Suggests: lksctp-tools%{?_isa}, pcsc-lite-devel%{?_isa}
 %endif
 
 # Standard JPackage base provides
-Provides: jre-headless%{?1} = %{epoch}:%{version}-%{release}
 Provides: jre-%{javaver}-%{origin}-headless%{?1} = %{epoch}:%{version}-%{release}
-Provides: jre-%{origin}-headless%{?1} = %{epoch}:%{version}-%{release}
 Provides: jre-%{javaver}-headless%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-%{javaver}-%{origin}-headless%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-%{javaver}-headless%{?1} = %{epoch}:%{version}-%{release}
+%if %is_system_jdk
 Provides: java-%{origin}-headless%{?1} = %{epoch}:%{version}-%{release}
+Provides: jre-%{origin}-headless%{?1} = %{epoch}:%{version}-%{release}
+Provides: jre-headless%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-headless%{?1} = %{epoch}:%{version}-%{release}
-
-# https://bugzilla.redhat.com/show_bug.cgi?id=1312019
-Provides: /usr/bin/jjs
-
+%endif
 }
 
 %define java_devel_rpo() %{expand:
@@ -980,25 +1137,26 @@ Requires(postun): %{_sbindir}/alternatives
 # Standard JPackage devel provides
 Provides: java-sdk-%{javaver}-%{origin}%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-sdk-%{javaver}%{?1} = %{epoch}:%{version}-%{release}
-Provides: java-sdk-%{origin}%{?1} = %{epoch}:%{version}-%{release}
-Provides: java-sdk%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-%{javaver}-devel%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-%{javaver}-%{origin}-devel%{?1} = %{epoch}:%{version}-%{release}
-Provides: java-%{origin}-devel%{?1} = %{epoch}:%{version}-%{release}
+%if %is_system_jdk
+Provides: java-sdk-%{origin}%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-devel%{?1} = %{epoch}:%{version}-%{release}
-
+Provides: java-%{origin}-devel%{?1} = %{epoch}:%{version}-%{release}
+Provides: java-sdk%{?1} = %{epoch}:%{version}-%{release}
+%endif
 }
-
 
 %define java_demo_rpo() %{expand:
 Requires: %{name}%{?1}%{?_isa} = %{epoch}:%{version}-%{release}
 OrderWithRequires: %{name}-headless%{?1}%{?_isa} = %{epoch}:%{version}-%{release}
 
-Provides: java-demo%{?1} = %{epoch}:%{version}-%{release}
-Provides: java-%{origin}-demo%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-%{javaver}-demo%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-%{javaver}-%{origin}-demo%{?1} = %{epoch}:%{version}-%{release}
-
+%if %is_system_jdk
+Provides: java-demo%{?1} = %{epoch}:%{version}-%{release}
+Provides: java-%{origin}-demo%{?1} = %{epoch}:%{version}-%{release}
+%endif
 }
 
 %define java_javadoc_rpo() %{expand:
@@ -1009,19 +1167,23 @@ Requires(post):   %{_sbindir}/alternatives
 Requires(postun): %{_sbindir}/alternatives
 
 # Standard JPackage javadoc provides
-Provides: java-javadoc%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-%{javaver}-javadoc%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-%{javaver}-%{origin}-javadoc%{?1} = %{epoch}:%{version}-%{release}
+%if %is_system_jdk
+Provides: java-javadoc%{?1} = %{epoch}:%{version}-%{release}
+%endif
 }
 
 %define java_src_rpo() %{expand:
 Requires: %{name}-headless%{?1}%{?_isa} = %{epoch}:%{version}-%{release}
 
 # Standard JPackage sources provides
-Provides: java-src%{?1} = %{epoch}:%{version}-%{release}
-Provides: java-%{origin}-src%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-%{javaver}-src%{?1} = %{epoch}:%{version}-%{release}
 Provides: java-%{javaver}-%{origin}-src%{?1} = %{epoch}:%{version}-%{release}
+%if %is_system_jdk
+Provides: java-src%{?1} = %{epoch}:%{version}-%{release}
+Provides: java-%{origin}-src%{?1} = %{epoch}:%{version}-%{release}
+%endif
 }
 
 %define java_accessibility_rpo() %{expand:
@@ -1326,6 +1488,17 @@ The %{origin_nice} runtime environment %{majorver}.
 %{debug_warning}
 %endif
 
+%if %{include_fastdebug_build}
+%package fastdebug
+Summary: %{origin_nice} Runtime Environment %{majorver} %{fastdebug_on}
+Group:   Development/Languages
+
+%{java_rpo -- %{fastdebug_suffix_unquoted}}
+%description fastdebug
+The %{origin_nice} runtime environment.
+%{fastdebug_warning}
+%endif
+
 %if %{include_normal_build}
 %package headless
 Summary: %{origin_nice} Headless Runtime Environment %{majorver}
@@ -1345,6 +1518,18 @@ Summary: %{origin_nice} Runtime Environment %{majorver} %{debug_on}
 %description headless-slowdebug
 The %{origin_nice} runtime environment %{majorver} without audio and video support.
 %{debug_warning}
+%endif
+
+%if %{include_fastdebug_build}
+%package headless-fastdebug
+Summary: %{origin_nice} Runtime Environment %{fastdebug_on}
+Group:   Development/Languages
+
+%{java_headless_rpo -- %{fastdebug_suffix_unquoted}}
+
+%description headless-fastdebug
+The %{origin_nice} runtime environment %{majorver} without audio and video support.
+%{fastdebug_warning}
 %endif
 
 %if %{include_normal_build}
@@ -1368,6 +1553,18 @@ The %{origin_nice} development tools %{majorver}.
 %{debug_warning}
 %endif
 
+%if %{include_fastdebug_build}
+%package devel-fastdebug
+Summary: %{origin_nice} Development Environment %{majorver} %{fastdebug_on}
+Group:   Development/Tools
+
+%{java_devel_rpo -- %{fastdebug_suffix_unquoted}}
+
+%description devel-fastdebug
+The %{origin_nice} development tools %{majorver}.
+%{fastdebug_warning}
+%endif
+
 %if %{include_normal_build}
 %package demo
 Summary: %{origin_nice} Demos %{majorver}
@@ -1387,6 +1584,18 @@ Summary: %{origin_nice} Demos %{majorver} %{debug_on}
 %description demo-slowdebug
 The %{origin_nice} demos %{majorver}.
 %{debug_warning}
+%endif
+
+%if %{include_fastdebug_build}
+%package demo-fastdebug
+Summary: %{origin_nice} Demos %{majorver} %{fastdebug_on}
+Group:   Development/Languages
+
+%{java_demo_rpo -- %{fastdebug_suffix_unquoted}}
+
+%description demo-fastdebug
+The %{origin_nice} demos %{majorver}.
+%{fastdebug_warning}
 %endif
 
 %if %{include_normal_build}
@@ -1410,6 +1619,19 @@ Summary: %{origin_nice} Source Bundle %{majorver} %{for_debug}
 The java-%{origin}-src-slowdebug sub-package contains the complete %{origin_nice} %{majorver}
  class library source code for use by IDE indexers and debuggers. Debugging %{for_debug}.
 %endif
+
+%if %{include_fastdebug_build}
+%package src-fastdebug
+Summary: %{origin_nice} Source Bundle %{majorver} %{for_fastdebug}
+Group:   Development/Languages
+
+%{java_src_rpo -- %{fastdebug_suffix_unquoted}}
+
+%description src-fastdebug
+The java-%{origin}-src-fastdebug sub-package contains the complete %{origin_nice} %{majorver}
+ class library source code for use by IDE indexers and debuggers. Debugging %{for_fastdebug}.
+%endif
+
 
 %if %{include_normal_build}
 %package javadoc
@@ -1464,6 +1686,16 @@ Summary: %{origin_nice} %{majorver} accessibility connector %{for_debug}
 See normal java-%{version}-openjdk-accessibility description.
 %endif
 
+%if %{include_fastdebug_build}
+%package accessibility-fastdebug
+Summary: %{origin_nice} %{majorver} accessibility connector %{for_fastdebug}
+
+%{java_accessibility_rpo -- %{fastdebug_suffix_unquoted}}
+
+%description accessibility-fastdebug
+See normal java-%{version}-openjdk-accessibility description.
+%endif
+
 
 %if %{with_openjfx_binding}
 %package openjfx
@@ -1499,24 +1731,56 @@ Provides: javafx-devel-slowdebug = %{epoch}:%{version}-%{release}
 %description openjfx-devel-slowdebug
 Set of links from OpenJDK-slowdebug (sdk) to normal OpenJFX. OpenJFX do not support debug buuilds of itself
 %endif
+
+%if %{include_fastdebug_build}
+%package openjfx-fastdebug
+Summary: OpenJDK x OpenJFX connector %{for_fastdebug}. his package adds symliks finishing Java FX integration to %{name}-fastdebug
+Requires: %{name}-fastdebug%{?_isa} = %{epoch}:%{version}-%{release}
+Requires: openjfx%{?_isa}
+Provides: javafx-fastdebug = %{epoch}:%{version}-%{release}
+%description openjfx-fastdebug
+Set of links from OpenJDK-fastdebug (jre) to normal OpenJFX. OpenJFX do not support debug buuilds of itself
+
+%package openjfx-devel-fastdebug
+Summary: OpenJDK x OpenJFX connector for FX developers %{for_fastdebug}. This package adds symliks finishing Java FX integration to %{name}-devel-slowdebug
+Requires: %{name}-devel-fastdebug%{?_isa} = %{epoch}:%{version}-%{release}
+Requires: openjfx-devel%{?_isa}
+Provides: javafx-devel-fastdebug = %{epoch}:%{version}-%{release}
+%description openjfx-devel-fastdebug
+Set of links from OpenJDK-fastdebug (sdk) to normal OpenJFX. OpenJFX do not support debug buuilds of itself
+%endif
 %endif
 
 %prep
+
+# Using the echo macro breaks rpmdev-bumpspec, as it parses the first line of stdout :-(
+%if 0%{?stapinstall:1}
+  echo "CPU: %{_target_cpu}, arch install directory: %{archinstall}, SystemTap install directory: %{stapinstall}"
+%else
+  %{error:Unrecognised architecture %{_target_cpu}}
+%endif
+
 if [ %{include_normal_build} -eq 0 -o  %{include_normal_build} -eq 1 ] ; then
   echo "include_normal_build is %{include_normal_build}"
 else
-  echo "include_normal_build is %{include_normal_build}, thats invalid. Use 1 for yes or 0 for no"
+  echo "include_normal_build is %{include_normal_build}, that is invalid. Use 1 for yes or 0 for no"
   exit 11
 fi
 if [ %{include_debug_build} -eq 0 -o  %{include_debug_build} -eq 1 ] ; then
   echo "include_debug_build is %{include_debug_build}"
 else
-  echo "include_debug_build is %{include_debug_build}, thats invalid. Use 1 for yes or 0 for no"
+  echo "include_debug_build is %{include_debug_build}, that is invalid. Use 1 for yes or 0 for no"
   exit 12
 fi
-if [ %{include_debug_build} -eq 0 -a  %{include_normal_build} -eq 0 ] ; then
-  echo "You have disabled both include_debug_build and include_normal_build. That is a no go."
+if [ %{include_fastdebug_build} -eq 0 -o  %{include_fastdebug_build} -eq 1 ] ; then
+  echo "include_fastdebug_build is %{include_fastdebug_build}"
+else
+  echo "include_fastdebug_build is %{include_fastdebug_build}, that is invalid. Use 1 for yes or 0 for no"
   exit 13
+fi
+if [ %{include_debug_build} -eq 0 -a  %{include_normal_build} -eq 0 -a  %{include_fastdebug_build} -eq 0 ] ; then
+  echo "You have disabled all builds (normal,fastdebug,slowdebug). That is a no go."
+  exit 14
 fi
 
 echo "Update version: %{updatever}"
@@ -1603,6 +1867,9 @@ tar --strip-components=1 -x -I xz -f %{SOURCE8}
 %if %{include_debug_build}
 cp -r tapset tapset%{debug_suffix}
 %endif
+%if %{include_fastdebug_build}
+cp -r tapset tapset%{fastdebug_suffix}
+%endif
 
 
 for suffix in %{build_loop} ; do
@@ -1646,7 +1913,6 @@ sed -e "s:@NSS_LIBDIR@:%{NSS_LIBDIR}:g" %{SOURCE11} > nss.cfg
 
 
 %build
-
 # How many CPU's do we have?
 export NUM_PROC=%(/usr/bin/getconf _NPROCESSORS_ONLN 2> /dev/null || :)
 export NUM_PROC=${NUM_PROC:-1}
@@ -1666,13 +1932,13 @@ export CFLAGS="$CFLAGS -mieee"
 # pass EXTRA_CFLAGS to the HotSpot C++ compiler...
 EXTRA_CFLAGS="%ourcppflags -Wno-error"
 EXTRA_CPP_FLAGS="%ourcppflags"
-# Fixes annocheck warnings in assembler files due to missing build notes
-EXTRA_ASFLAGS="${EXTRA_CFLAGS} -Wa,--generate-missing-build-notes=yes"
 
 %ifarch %{power64} ppc
 # fix rpmlint warnings
 EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-strict-aliasing"
 %endif
+
+EXTRA_ASFLAGS="${EXTRA_CFLAGS} -Wa,--generate-missing-build-notes=yes"
 export EXTRA_CFLAGS EXTRA_ASFLAGS
 
 (cd %{top_level_dir_name}/common/autoconf
@@ -1816,7 +2082,7 @@ $JAVA_HOME/bin/java TestCryptoLevel
 $JAVA_HOME/bin/javac -d . %{SOURCE14}
 $JAVA_HOME/bin/java $(echo $(basename %{SOURCE14})|sed "s|\.java||")
 
-# Verify system crypto (policy) can be disabled
+# Check system crypto (policy) can be disabled
 $JAVA_HOME/bin/javac -d . %{SOURCE15}
 $JAVA_HOME/bin/java -Djava.security.disableSystemPropertiesFile=true $(echo $(basename %{SOURCE15})|sed "s|\.java||")
 
@@ -1892,6 +2158,7 @@ quit
 end
 run -version
 EOF
+
 grep 'JavaCallWrapper::JavaCallWrapper' gdb.out
 
 # Check src.zip has all sources. See RHBZ#1130490
@@ -2209,6 +2476,32 @@ require "copy_jdk_configs.lua"
 
 %posttrans  devel-slowdebug
 %{posttrans_devel -- %{debug_suffix_unquoted}}
+%endif
+
+%if %{include_fastdebug_build}
+%post fastdebug
+%{post_script -- %{fastdebug_suffix_unquoted}}
+
+%post headless-fastdebug
+%{post_headless -- %{fastdebug_suffix_unquoted}}
+
+%postun fastdebug
+%{postun_script -- %{fastdebug_suffix_unquoted}}
+
+%postun headless-fastdebug
+%{postun_headless -- %{fastdebug_suffix_unquoted}}
+
+%posttrans fastdebug
+%{posttrans_script -- %{fastdebug_suffix_unquoted}}
+
+%post devel-fastdebug
+%{post_devel -- %{fastdebug_suffix_unquoted}}
+
+%postun devel-fastdebug
+%{postun_devel -- %{fastdebug_suffix_unquoted}}
+
+%posttrans  devel-fastdebug
+%{posttrans_devel -- %{fastdebug_suffix_unquoted}}
 
 %endif
 
@@ -2240,9 +2533,7 @@ require "copy_jdk_configs.lua"
 %files javadoc
 %{files_javadoc %{nil}}
 
-# this puts huge file to /usr/share
-# unluckily ti is really a documentation file
-# and unluckily it really is architecture-dependent, as eg. aot and grail are now x86_64 only
+# This puts a huge documentation file in /usr/share
 # same for debug variant
 %files javadoc-zip
 %{files_javadoc_zip %{nil}}
@@ -2283,7 +2574,37 @@ require "copy_jdk_configs.lua"
 %endif
 %endif
 
+%if %{include_fastdebug_build}
+%files fastdebug
+%{files_jre -- %{fastdebug_suffix_unquoted}}
+
+%files headless-fastdebug
+%{files_jre_headless -- %{fastdebug_suffix_unquoted}}
+
+%files devel-fastdebug
+%{files_devel -- %{fastdebug_suffix_unquoted}}
+
+
+%files demo-fastdebug  -f %{name}-demo.files-fastdebug
+%{files_demo -- %{fastdebug_suffix_unquoted}}
+
+%files src-fastdebug
+%{files_src -- %{fastdebug_suffix_unquoted}}
+
+%files accessibility-fastdebug
+%{files_accessibility -- %{fastdebug_suffix_unquoted}}
+
+%if %{with_openjfx_binding}
+%files openjfx-fastdebug -f %{name}-openjfx.files-fastdebug
+
+%files openjfx-devel-fastdebug -f %{name}-openjfx-devel.files-fastdebug
+%endif
+%endif
+
 %changelog
+* Sat Dec 19 2020 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.275.b01-4
+- introduced fastdebug build cycle and subpackages
+
 * Thu Dec 17 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.275.b01-3
 - introduced nm based check to verify alt-java on x86_64 is patched, and no other alt-java or java is patched
 - patch600 rh1750419-redhat_alt_java.patch amended to die, if it is used wrongly
@@ -2304,92 +2625,226 @@ require "copy_jdk_configs.lua"
 - Update to aarch64-shenandoah-jdk8u275-b01 (GA)
 - Update release notes for 8u275.
 
-* Wed Oct 21 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b10-0
+* Sat Oct 31 2020 Jeff Law <law@redhat.com> - 1:1.8.0.272.b10-1
+- Avoid "register" for C++17
+
+* Sat Oct 17 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b10-0
 - Update to aarch64-shenandoah-jdk8u272-b10.
-- Test build JDK is usable by running 'java -version'.
-- JFR must now be explicitly disabled when unwanted (e.g. x86), following switch of upstream default.
-- Remove JDK-8154313 backport now applied upstream.
-- Change target from 'zip-docs' to 'docs-zip', which is the naming used upstream.
-- Remove "-fcommon" following GCC 10 fixes upstream (JDK-8238380, JDK-8238386, JDK-8238388)
-- Update tarball generation script to use PR3795, following inclusion of JDK-8177334
-- Add additional s390 size_t case in g1ConcurrentMarkObjArrayProcessor.cpp introduced by JDK-8057003
-- Add additional s390 log2_intptr case in shenandoahUtils.cpp introduced by JDK-8245464
-- Update tarball generation script to use PR3799, following inclusion of JDK-8245468 (TLSv1.3)
+- Switch to GA mode for final release.
 - Update release notes for 8u272 release.
 - Add backport of JDK-8254177 to update to tzdata 2020b
 - Require tzdata 2020b due to resource changes in JDK-8254177
-- Temporarily roll back tzdata build requirement while tzdata update is still in testing
 - Adjust JDK-8062808/PR3548 following constantPool.hpp context change in JDK-8243302
 - Adjust PR3593 following g1StringDedupTable.cpp context change in JDK-8240124 & JDK-8244955
+
+* Mon Sep 28 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b09-0.0.ea
+- Update to aarch64-shenandoah-jdk8u272-b09 (EA).
+
+* Wed Sep 16 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b08-0.0.ea
+- Update to aarch64-shenandoah-jdk8u272-b08 (EA).
+
+* Tue Sep 08 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b07-0.0.ea
+- Update to aarch64-shenandoah-jdk8u272-b07.
+
+* Thu Sep 03 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b06-0.0.ea
+- Update to aarch64-shenandoah-jdk8u272-b06.
+- Update tarball generation script to use PR3799, following inclusion of JDK-8245468 (TLSv1.3)
+
+* Wed Sep 02 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b05-0.1.ea
+- Update to aarch64-shenandoah-jdk8u272-b05-shenandoah-merge-2020-08-28.
+- Add additional s390 log2_intptr case in shenandoahUtils.cpp introduced by JDK-8245464
+
+* Thu Aug 27 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b05-0.0.ea
+- Update to aarch64-shenandoah-jdk8u272-b05.
+- Add additional s390 size_t case in g1ConcurrentMarkObjArrayProcessor.cpp introduced by JDK-8057003
+
+* Wed Aug 19 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b04-0.0.ea
+- Update to aarch64-shenandoah-jdk8u272-b04.
+- Update tarball generation script to use PR3795, following inclusion of JDK-8177334
+
+* Wed Aug 19 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b03-0.0.ea
+- Update to aarch64-shenandoah-jdk8u272-b03.
+
+* Wed Aug 19 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b02-0.1.ea
+- Remove "-fcommon" following GCC 10 fixes upstream (JDK-8238380, JDK-8238386, JDK-8238388)
+
+* Sun Aug 09 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b02-0.0.ea
+- Update to aarch64-shenandoah-jdk8u272-b02.
+- Remove JDK-8154313 backport now applied upstream.
+- Change target from 'zip-docs' to 'docs-zip', which is the naming used upstream.
 
 * Wed Aug 05 2020 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.272.b01-0.1.ea
 - Fix vendor name to include '.': Red Hat, Inc => Red Hat, Inc.
 
-* Mon Jul 27 2020 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.265.b01-1
+* Sat Aug 01 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.272.b01-0.0.ea
+- Update to aarch64-shenandoah-jdk8u272-b01.
+- Switch to EA mode.
+- Test build JDK is usable by running 'java -version'.
+- JFR must now be explicitly disabled when unwanted (e.g. x86), following switch of upstream default.
+
+* Mon Jul 27 2020 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.265.b01-2
 - ASSEMBLY_EXCEPTION LICENSE THIRD_PARTY_README moved to fully versioned dirs
 
-* Mon Jul 27 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.265.b01-0
+* Mon Jul 27 2020 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.265.b01-1
+- Reorder _lto_cflags define so that it gets picked up via optflags
+
+* Mon Jul 27 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.265.b01-1
 - Update to aarch64-shenandoah-jdk8u265-b01.
 - Update release notes for 8u265 release.
 
-* Mon Jul 13 2020 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.262.b10-1
-- Set vendor property and vendor URLs
-- Made URLs to be preconfigured by OS
-
-* Sun Jul 12 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b10-0
+* Sun Jul 12 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b10-1
 - Update to aarch64-shenandoah-jdk8u262-b10.
+- Switch to GA mode for final release.
 - Update release notes for 8u262 release.
-- Remove issues in NEWS file duplicated between 8u252 & 8u262 releases.
-- Update generate_source_tarball.sh script to use the PR3756 patch and retain the secp256k1 curve.
-- Add the -'4curve' suffix to the tarball name.
-- Adjust JDK-8143245/PR3548 patch following context changes due to JDK-8203287 for JFR
-- Adjust RH1648644 following context changes due to introduction of JFR packages
 - Split JDK-8042159 patch into per-repo patches as upstream.
 - Update JDK-8042159 JDK patch to apply after JDK-8238002 changes to Awt2dLibraries.gmk
-- Remove JDK-8244461 & JDK-8233880 backports included upstream in 8u262-b03.
+- Remove issues in NEWS file duplicated between 8u252 & 8u262 releases.
+
+* Sun Jul 12 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b09-0.1.ea
+- Update to aarch64-shenandoah-jdk8u262-b09-shenandoah-merge-2020-07-03
+
+* Sun Jul 12 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b09-0.0.ea
+- Update to aarch64-shenandoah-jdk8u262-b09.
+- With JDK-8248399 fixed, a broken jfr binary is no longer installed on architectures without JFR.
+
+* Sun Jul 12 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b08-0.1.ea
+- Fix typo in jfr_arches which leads to ppc64 being wrongly excluded.
+
+* Sun Jul 12 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b08-0.0.ea
+- Update to aarch64-shenandoah-jdk8u262-b08.
+
+* Sun Jul 12 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b07-0.1.ea
+- Update to aarch64-shenandoah-jdk8u262-b07-shenandoah-merge-2020-06-18.
+
+* Sun Jul 12 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b07-0.0.ea
+- Update to aarch64-shenandoah-jdk8u262-b07.
+- Require tzdata 2020a so system tzdata matches resource updates in b07
+
+* Sat Jul 11 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b06-0.0.ea
+- Update to aarch64-shenandoah-jdk8u262-b06.
+
+* Sat Jul 11 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b05-0.4.ea
+- Update to aarch64-shenandoah-jdk8u262-b05-shenandoah-merge-2020-06-04.
+
+* Thu Jul 09 2020 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.262.b05-0.3.ea
+- changed to be non-system jdk
+- is_system_jdk set to 0
+
+* Thu Jul 09 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b05-0.2.ea
+- Re-introduce java-openjdk-src & java-openjdk-demo for system_jdk builds.
+- Fix accidental renaming of java-openjdk-devel to java-devel-openjdk.
+
+* Thu Jul 09 2020 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.262.b05-0.1.ea
+- prepared to become non system jdk soon, by backporting is_system_jdk patch from jdk11
+- Added is_system_jdk variable, but left it on 1, used that variable where neessary
+
+* Tue Jul 07 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b05-0.0.ea
+- Update to aarch64-shenandoah-jdk8u262-b05.
+
+* Sun Jul 05 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b04-0.0.ea
+- Update to aarch64-shenandoah-jdk8u262-b04.
+
+* Fri Jul 03 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b03-0.4.ea
 - Enable JFR in our builds, ahead of upstream default.
 - Only enable JFR for JIT builds, as it is not supported with Zero.
 - Turn off JFR on x86 for now due to assert(SerializePageShiftCount == count) crash.
 - Explicitly list jfr.jar, default.jfc & profile.jfc in the spec file.
 - Introduce jfr_arches for architectures which support JFR.
-- Fix typo in jfr_arches which leads to ppc64 being wrongly excluded.
-- Add jfr binary to devel package and alternatives set
-- With JDK-8248399 fixed, a broken jfr binary is no longer installed on architectures without JFR.
-- Require tzdata 2020a so system tzdata matches resource updates in b07
 - Use sa_arches for libsaproc.so inclusion.
+- Move LTO handling to same location as other compiler flags handling.
 
-* Wed May 27 2020 Jiri Andrlik <jandrlik@redhat.com> - 1:1.8.0.252.b09-2
-- backports of provides fixes from master
+* Wed Jul 01 2020 Jeff Law <law@redhat.com> - 1:1.8.0.262.b03-0.3.ea
+- Disable LTO
 
-* Fri May 22 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b09-1
-- Actually apply the JDK-8233880 patch...
+* Mon Jun 29 2020 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.262.b03-0.2.ea
+- Set vendor property and vendor URLs
+- Made URLs to be preconfigured by os
 
-* Sun May 17 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b09-1
+* Wed Jun 24 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b03-0.1.ea
+- Update to aarch64-shenandoah-jdk8u262-b03-shenandoah-merge-2020-05-20.
+
+* Tue Jun 23 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b03-0.0.ea
+- Update to aarch64-shenandoah-jdk8u262-b03.
+- Remove JDK-8244461 & JDK-8233880 backports included upstream in b03.
+
+* Mon Jun 22 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b02-0.0.ea
+- Update to aarch64-shenandoah-jdk8u262-b02.
+
+* Mon Jun 22 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.262.b01-0.1.ea
+- Update to aarch64-shenandoah-jdk8u262-b01.
+- Switch to EA mode.
+- Adjust JDK-8143245/PR3548 patch following context changes due to JDK-8203287 for JFR
+- Adjust RH1648644 following context changes due to introduction of JFR packages
+- Add jfr binary to devel package and alternatives set
+
+* Thu Jun 18 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b09-1
+- Add release notes.
+
+* Thu Jun 18 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b09-0
+- Update to aarch64-shenandoah-jdk8u252-b09.
+- Switch to GA mode for final release.
+
+* Thu Jun 18 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b08-0.0.ea
+- Update to aarch64-shenandoah-jdk8u252-b08.
+- Drop JDK-8241296 backport now applied upstream.
+
+* Wed Jun 17 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b07-0.0.ea
+- Update to aarch64-shenandoah-jdk8u252-b07.
+
+* Thu Jun 11 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b06-0.0.ea
+- Update to aarch64-shenandoah-jdk8u252-b06.
+- Drop upstreamed AArch64 fix JDK-8224851
+
+* Wed Jun 10 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b05-0.0.ea
+- Update to aarch64-shenandoah-jdk8u252-b05.
+
+* Mon Jun 08 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b04-0.0.ea
+- Update to aarch64-shenandoah-jdk8u252-b04.
+
+* Sun Jun 07 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b03-0.0.ea
+- Update to aarch64-shenandoah-jdk8u252-b03.
+- Adjust PR2974/RH1337583 & PR3083/RH1346460 following context changes in JDK-8230978
+
+* Tue Jun 02 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b02-0.0.ea
+- Update to aarch64-shenandoah-jdk8u252-b02.
+
+* Fri May 22 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b01-0.3.ea
+- Update generate_source_tarball.sh script to use the PR3756 patch and retain the secp256k1 curve.
+- Regenerate source tarball using the updated script and add the -'4curve' suffix.
+
+* Wed May 20 2020 Nicolas De Amicis <deamicis@bluewin.ch> - 1:1.8.0.252.b01-0.2.ea
+- Switch package openjfx from openjfx to openjfx8
+
+* Sun May 17 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b01-0.1.ea
 - Backport JDK-8233880 to fix version detection of GCC 10.
 - Remove compiler flags used to disable GCC optimisations. This is now
   resolved by -fno-delete-null-pointer-checks and -fno-lifetime-dse being turned
   on in the upstream build, after GCC >= 6 is detected.
 
-* Sun May 03 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b09-0
-- Update to aarch64-shenandoah-jdk8u252-b09.
-- Switch to GA mode for final release.
-- Add release notes.
-- Adjust PR2974/RH1337583 & PR3083/RH1346460 following context changes in JDK-8230978
-- Remove backports of JDK-8224851 & JDK-8241296 now applied upstream.
-
-* Sun May 03 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b01-0.1.ea
+* Thu May 07 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.252.b01-0.0.ea
 - Update to aarch64-shenandoah-jdk8u252-b01.
 - Switch to EA mode.
 - Adjust JDK-8199936/PR3533 patch following JDK-8227397 configure change
 - Make use of --with-extra-asflags introduced in jdk8u252-b01.
-- Drop obsolete local patch, JDK-8219772, now that ASFLAGS are properly handled.
 
-* Sun Mar 22 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.242.b08-1
+* Tue May 05 2020 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.242.b08-4
+- Add patch for JDK-8244461 so as to fix sys/sysctl.h removal
+  in upcoming glibc 2.32
+
+* Tue Mar 24 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.242.b08-3
+- Introduce stapinstall variable to set SystemTap arch directory correctly (e.g. arm64 on aarch64)
+- Include support for noarch for when koji creates source RPMs
+
+* Sun Mar 22 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.242.b08-2
+- Replace Bash 'if' with rpm '%if'
+- Resolves: rhbz#1813550
+
+* Sun Mar 22 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.242.b08-2
 - Restructure the build so a minimal initial build is then used for the final build (with docs)
 - This reduces pressure on the system JDK and ensures the JDK being built can do a full build
 - Resolves: rhbz#1813550
 
-* Fri Mar 20 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.242.b08-1
+* Fri Mar 20 2020 Andrew John Hughes <gnu.andrew@redhat.com> - 1:1.8.0.242.b08-2
 - Backport JDK-8241296 to fix segfaults when active_handles is NULL
 - Resolves: rhbz#1813550
 
