@@ -41,10 +41,11 @@
 %global normal_suffix ""
 
 %global debug_warning This package is unoptimised with full debugging. Install only as needed and remove ASAP.
-%global debug_on with full debug on
 %global fastdebug_warning This package is optimised with full debugging. Install only as needed and remove ASAP.
-%global for_fastdebug_on with minimal debug on
-%global for_debug for packages with debug on
+%global debug_on unoptimised with full debugging on
+%global fastdebug_on optimised with full debugging on
+%global for_fastdebug for packages with debugging on and optimisation
+%global for_debug for packages with debugging on and no optimisation
 
 %if %{with release}
 %global include_normal_build 1
@@ -271,10 +272,31 @@
 %global origin          openjdk
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
+
+# Define vendor information used by OpenJDK
+%global oj_vendor Red Hat, Inc.
+%global oj_vendor_url "https://www.redhat.com/"
+# Define what url should JVM offer in case of a crash report
+# order may be important, epel may have rhel declared
+%if 0%{?epel}
+%global oj_vendor_bug_url  https://bugzilla.redhat.com/enter_bug.cgi?product=Fedora%20EPEL&component=%{name}&version=epel%{epel}
+%else
+%if 0%{?fedora}
+# Does not work for rawhide, keeps the version field empty
+%global oj_vendor_bug_url  https://bugzilla.redhat.com/enter_bug.cgi?product=Fedora&component=%{name}&version=%{fedora}
+%else
+%if 0%{?rhel}
+%global oj_vendor_bug_url  https://bugzilla.redhat.com/enter_bug.cgi?product=Red%20Hat%20Enterprise%20Linux%20%{rhel}&component=%{name}
+%else
+%global oj_vendor_bug_url  https://bugzilla.redhat.com/enter_bug.cgi
+%endif
+%endif
+%endif
+
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global shenandoah_project	aarch64-port
 %global shenandoah_repo		jdk8u-shenandoah
-%global shenandoah_revision    	aarch64-shenandoah-jdk8u275-b01
+%global shenandoah_revision    	aarch64-shenandoah-jdk8u282-b08
 # Define old aarch64/jdk8u tree variables for compatibility
 %global project         %{shenandoah_project}
 %global repo            %{shenandoah_repo}
@@ -289,7 +311,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      6
+%global rpmrelease      0
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -315,23 +337,6 @@
 %endif
 
 %global javaver         1.%{majorver}.0
-
-# Define what url should JVM offer in case of a crash report
-# order may be important, epel may have rhel declared
-%if 0%{?epel}
-%global bugs  https://bugzilla.redhat.com/enter_bug.cgi?product=Fedora%20EPEL&component=%{name}&version=epel%{epel}
-%else
-%if 0%{?fedora}
-# Does not work for rawhide, keeps the version field empty
-%global bugs  https://bugzilla.redhat.com/enter_bug.cgi?product=Fedora&component=%{name}&version=%{fedora}
-%else
-%if 0%{?rhel}
-%global bugs  https://bugzilla.redhat.com/enter_bug.cgi?product=Red%20Hat%20Enterprise%20Linux%20%{rhel}&component=%{name}
-%else
-%global bugs  https://bugzilla.redhat.com/enter_bug.cgi
-%endif
-%endif
-%endif
 
 # parametrized macros are order-sensitive
 %global compatiblename  %{name}
@@ -1216,7 +1221,7 @@ Release: %{?eaprefix}%{rpmrelease}%{?extraver}%{?dist}
 # provides >= 1.6.0 must specify the epoch, "java >= 1:1.6.0".
 
 Epoch:   1
-Summary: %{origin_nice} Runtime Environment %{majorver}
+Summary: %{origin_nice} %{majorver} Runtime Environment
 
 # HotSpot code is licensed under GPLv2
 # JDK library code is licensed under GPLv2 with the Classpath exception
@@ -1277,6 +1282,9 @@ Source20: repackReproduciblePolycies.sh
 Source100: config.guess
 Source101: config.sub
 
+# Ensure vendor settings are correct
+Source16: CheckVendor.java
+
 ############################################
 #
 # RPM/distribution specific patches
@@ -1293,6 +1301,8 @@ Patch1:   rh1648242-accessible_toolkit_crash_do_not_break_jvm.patch
 Patch3:   rh1648644-java_access_bridge_privileged_security.patch
 # Turn on AssumeMP by default on RHEL systems
 Patch534: rh1648246-always_instruct_vm_to_assume_multiple_processors_are_available.patch
+# RH1582504: Use RSA as default for keytool, as DSA is disabled in all crypto policies except LEGACY
+Patch1003: rh1582504-rsa_default_for_keytool.patch
 
 #############################################
 #
@@ -1312,8 +1322,6 @@ Patch512: rh1649664-awt2dlibraries_compiled_with_no_strict_overflow.patch
 Patch523: pr2974-rh1337583-add_systemlineendings_option_to_keytool_and_use_line_separator_instead_of_crlf_in_pkcs10.patch
 # PR3083, RH1346460: Regression in SSL debug output without an ECC provider
 Patch528: pr3083-rh1346460-for_ssl_debug_return_null_instead_of_exception_when_theres_no_ecc_provider.patch
-# PR3601: Fix additional -Wreturn-type issues introduced by 8061651
-Patch530: pr3601-fix_additional_Wreturn_type_issues_introduced_by_8061651_for_prims_jvm_cpp.patch
 # PR2888: OpenJDK should check for system cacerts database (e.g. /etc/pki/java/cacerts)
 # PR3575, RH1567204: System cacerts database handling should not affect jssecacerts
 Patch539: pr2888-openjdk_should_check_for_system_cacerts_database_eg_etc_pki_java_cacerts.patch
@@ -1342,8 +1350,6 @@ Patch111: jdk8218811-perfMemory_linux.patch
 Patch103: pr3593-s390_use_z_format_specifier_for_size_t_arguments_as_size_t_not_equals_to_int.patch
 # x86: S8199936, PR3533: HotSpot generates code with unaligned stack, crashes on SSE operations (-mstackrealign workaround)
 Patch105: jdk8199936-pr3533-enable_mstackrealign_on_x86_linux_as_well_as_x86_mac_os_x.patch
-# AArch64: PR3519: Fix further functions with a missing return value (AArch64)
-Patch106: pr3519-fix_further_functions_with_a_missing_return_value.patch
 # S390 ambiguous log2_intptr calls
 Patch107: s390-8214206_fix.patch
 
@@ -1363,10 +1369,6 @@ Patch502: pr2462-resolve_disabled_warnings_for_libunpack_and_the_unpack200_binar
 Patch571: jdk8199936-pr3591-enable_mstackrealign_on_x86_linux_as_well_as_x86_mac_os_x_jdk.patch
 # 8143245, PR3548: Zero build requires disabled warnings
 Patch574: jdk8143245-pr3548-zero_build_requires_disabled_warnings.patch
-# 8197981, PR3548: Missing return statement in __sync_val_compare_and_swap_8
-Patch575: jdk8197981-pr3548-missing_return_statement_in_sync_val_compare_and_swap_8.patch
-# 8062808, PR3548: Turn on the -Wreturn-type warning
-Patch577: jdk8062808-pr3548-turn_on_the_wreturn_type_warning.patch
 # s390: JDK-8203030, Type fixing for s390
 Patch102: jdk8203030-zero_s390_31_bit_size_t_type_conflicts_in_shared_code.patch
 # 8035341: Allow using a system installed libpng
@@ -1384,8 +1386,6 @@ Patch204: jdk8042159-allow_using_system_installed_lcms2-jdk.patch
 # able to be removed once that release is out
 # and used by this RPM.
 #############################################
-# JDK-8254177: (tz) Upgrade time-zone data to tzdata2020b
-Patch13: jdk8254177-tzdata2020b.patch
 
 #############################################
 #
@@ -1477,160 +1477,160 @@ BuildRequires: systemtap-sdt-devel
 %{java_rpo %{nil}}
 
 %description
-The %{origin_nice} runtime environment %{majorver}.
+The %{origin_nice} %{majorver} runtime environment.
 
 %if %{include_debug_build}
 %package slowdebug
-Summary: %{origin_nice} Runtime Environment %{majorver} %{debug_on}
+Summary: %{origin_nice} %{majorver} Runtime Environment %{debug_on}
 
 %{java_rpo -- %{debug_suffix_unquoted}}
 %description slowdebug
-The %{origin_nice} runtime environment %{majorver}.
+The %{origin_nice} %{majorver} runtime environment.
 %{debug_warning}
 %endif
 
 %if %{include_fastdebug_build}
 %package fastdebug
-Summary: %{origin_nice} Runtime Environment %{majorver} %{fastdebug_on}
+Summary: %{origin_nice} %{majorver} Runtime Environment %{fastdebug_on}
 Group:   Development/Languages
 
 %{java_rpo -- %{fastdebug_suffix_unquoted}}
 %description fastdebug
-The %{origin_nice} runtime environment.
+The %{origin_nice} %{majorver} runtime environment.
 %{fastdebug_warning}
 %endif
 
 %if %{include_normal_build}
 %package headless
-Summary: %{origin_nice} Headless Runtime Environment %{majorver}
+Summary: %{origin_nice} %{majorver} Headless Runtime Environment
 
 %{java_headless_rpo %{nil}}
 
 %description headless
-The %{origin_nice} runtime environment %{majorver} without audio and video support.
+The %{origin_nice} %{majorver} runtime environment without audio and video support.
 %endif
 
 %if %{include_debug_build}
 %package headless-slowdebug
-Summary: %{origin_nice} Runtime Environment %{majorver} %{debug_on}
+Summary: %{origin_nice} %{majorver} Runtime Environment %{debug_on}
 
 %{java_headless_rpo -- %{debug_suffix_unquoted}}
 
 %description headless-slowdebug
-The %{origin_nice} runtime environment %{majorver} without audio and video support.
+The %{origin_nice} %{majorver} runtime environment without audio and video support.
 %{debug_warning}
 %endif
 
 %if %{include_fastdebug_build}
 %package headless-fastdebug
-Summary: %{origin_nice} Runtime Environment %{fastdebug_on}
+Summary: %{origin_nice} %{majorver} Runtime Environment %{fastdebug_on}
 Group:   Development/Languages
 
 %{java_headless_rpo -- %{fastdebug_suffix_unquoted}}
 
 %description headless-fastdebug
-The %{origin_nice} runtime environment %{majorver} without audio and video support.
+The %{origin_nice} %{majorver} runtime environment without audio and video support.
 %{fastdebug_warning}
 %endif
 
 %if %{include_normal_build}
 %package devel
-Summary: %{origin_nice} Development Environment %{majorver}
+Summary: %{origin_nice} %{majorver} Development Environment
 
 %{java_devel_rpo %{nil}}
 
 %description devel
-The %{origin_nice} development tools %{majorver}.
+The %{origin_nice} %{majorver} development tools.
 %endif
 
 %if %{include_debug_build}
 %package devel-slowdebug
-Summary: %{origin_nice} Development Environment %{majorver} %{debug_on}
+Summary: %{origin_nice} %{majorver} Development Environment %{debug_on}
 
 %{java_devel_rpo -- %{debug_suffix_unquoted}}
 
 %description devel-slowdebug
-The %{origin_nice} development tools %{majorver}.
+The %{origin_nice} %{majorver} development tools.
 %{debug_warning}
 %endif
 
 %if %{include_fastdebug_build}
 %package devel-fastdebug
-Summary: %{origin_nice} Development Environment %{majorver} %{fastdebug_on}
+Summary: %{origin_nice} %{majorver} Development Environment %{fastdebug_on}
 Group:   Development/Tools
 
 %{java_devel_rpo -- %{fastdebug_suffix_unquoted}}
 
 %description devel-fastdebug
-The %{origin_nice} development tools %{majorver}.
+The %{origin_nice} %{majorver} development tools.
 %{fastdebug_warning}
 %endif
 
 %if %{include_normal_build}
 %package demo
-Summary: %{origin_nice} Demos %{majorver}
+Summary: %{origin_nice} %{majorver} Demos
 
 %{java_demo_rpo %{nil}}
 
 %description demo
-The %{origin_nice} demos %{majorver}.
+The %{origin_nice} %{majorver} demos.
 %endif
 
 %if %{include_debug_build}
 %package demo-slowdebug
-Summary: %{origin_nice} Demos %{majorver} %{debug_on}
+Summary: %{origin_nice} %{majorver} Demos %{debug_on}
 
 %{java_demo_rpo -- %{debug_suffix_unquoted}}
 
 %description demo-slowdebug
-The %{origin_nice} demos %{majorver}.
+The %{origin_nice} %{majorver} demos.
 %{debug_warning}
 %endif
 
 %if %{include_fastdebug_build}
 %package demo-fastdebug
-Summary: %{origin_nice} Demos %{majorver} %{fastdebug_on}
+Summary: %{origin_nice} %{majorver} Demos %{fastdebug_on}
 Group:   Development/Languages
 
 %{java_demo_rpo -- %{fastdebug_suffix_unquoted}}
 
 %description demo-fastdebug
-The %{origin_nice} demos %{majorver}.
+The %{origin_nice} %{majorver} demos.
 %{fastdebug_warning}
 %endif
 
 %if %{include_normal_build}
 %package src
-Summary: %{origin_nice} Source Bundle %{majorver}
+Summary: %{origin_nice} %{majorver} Source Bundle
 
 %{java_src_rpo %{nil}}
 
 %description src
-The java-%{origin}-src sub-package contains the complete %{origin_nice} %{majorver}
+The %{compatiblename}-src sub-package contains the complete %{origin_nice} %{majorver}
 class library source code for use by IDE indexers and debuggers.
 %endif
 
 %if %{include_debug_build}
 %package src-slowdebug
-Summary: %{origin_nice} Source Bundle %{majorver} %{for_debug}
+Summary: %{origin_nice} %{majorver} Source Bundle %{for_debug}
 
 %{java_src_rpo -- %{debug_suffix_unquoted}}
 
 %description src-slowdebug
-The java-%{origin}-src-slowdebug sub-package contains the complete %{origin_nice} %{majorver}
- class library source code for use by IDE indexers and debuggers. Debugging %{for_debug}.
+The %{compatiblename}-src-slowdebug sub-package contains the complete %{origin_nice} %{majorver}
+ class library source code for use by IDE indexers and debuggers, %{for_debug}.
 %endif
 
 %if %{include_fastdebug_build}
 %package src-fastdebug
-Summary: %{origin_nice} Source Bundle %{majorver} %{for_fastdebug}
+Summary: %{origin_nice} %{majorver} Source Bundle %{for_fastdebug}
 Group:   Development/Languages
 
 %{java_src_rpo -- %{fastdebug_suffix_unquoted}}
 
 %description src-fastdebug
-The java-%{origin}-src-fastdebug sub-package contains the complete %{origin_nice} %{majorver}
- class library source code for use by IDE indexers and debuggers. Debugging %{for_fastdebug}.
+The %{compatiblename}-src-fastdebug sub-package contains the complete %{origin_nice} %{majorver}
+ class library source code for use by IDE indexers and debuggers, %{for_fastdebug}.
 %endif
 
 
@@ -1831,7 +1831,6 @@ sh %{SOURCE12}
 %patch107
 
 # AArch64 fixes
-%patch106
 
 # x86 fixes
 %patch105
@@ -1842,18 +1841,15 @@ sh %{SOURCE12}
 %patch512
 %patch523
 %patch528
-%patch530
 %patch571
 %patch574
-%patch575
-%patch577
 %patch111
-%patch13
 
 # RPM-only fixes
 %patch539
 %patch600
 %patch1000
+%patch1003
 
 # RHEL-only patches
 %if ! 0%{?fedora} && 0%{?rhel} <= 7
@@ -1976,10 +1972,10 @@ function buildjdk() {
     --with-milestone=%{milestone} \
     --with-update-version=%{updatever} \
     --with-build-number=%{buildver} \
-    --with-vendor-name="Red Hat, Inc." \
-    --with-vendor-url="https://www.redhat.com/" \
-    --with-vendor-bug-url="%{bugs}" \
-    --with-vendor-vm-bug-url="%{bugs}" \
+    --with-vendor-name="%{oj_vendor}" \
+    --with-vendor-url="%{oj_vendor_url}" \
+    --with-vendor-bug-url="%{oj_vendor_bug_url}" \
+    --with-vendor-vm-bug-url="%{oj_vendor_bug_url}" \
     --with-boot-jdk=${buildjdk} \
     --with-debug-level=${debuglevel} \
     --enable-unlimited-crypto \
@@ -2097,6 +2093,10 @@ nm $JAVA_HOME/bin/%{alt_java_name} | grep set_speculation
 if ! nm $JAVA_HOME/bin/%{alt_java_name} | grep set_speculation ; then true ; else false; fi
 %endif
 
+
+# Check correct vendor values have been set
+$JAVA_HOME/bin/javac -d . %{SOURCE16}
+$JAVA_HOME/bin/java $(echo $(basename %{SOURCE16})|sed "s|\.java||") "%{oj_vendor}" %{oj_vendor_url} %{oj_vendor_bug_url}
 
 # Check debug symbols are present and can identify code
 find "$JAVA_HOME" -iname '*.so' -print0 | while read -d $'\0' lib
@@ -2296,6 +2296,13 @@ find $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/demo \
   | grep README \
   | sed 's|'$RPM_BUILD_ROOT'||' \
   | sed 's|^|%doc |' \
+  >> %{name}-demo.files"$suffix"
+# Find demo directories.
+find $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/demo \
+  $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/sample \
+  -type d | sort \
+  | sed 's|'$RPM_BUILD_ROOT'||' \
+  | sed 's|^|%dir |' \
   >> %{name}-demo.files"$suffix"
 
 # Create links which leads to separately installed java-atk-bridge and allow configuration
@@ -2603,6 +2610,20 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Sat Jan 30 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.282.b08-0
+- Update to aarch64-shenandoah-jdk8u282-b08 (GA)
+- Update release notes for 8u282.
+- Remove PR3601, covered upstream by JDK-8062808.
+- Remove upstreamed JDK-8197981/PR3548, JDK-8062808/PR3548 & JDK-8254177.
+- Extend RH1750419 alt-java fix to include external debuginfo, following JDK-8252395
+- Adapt JDK-8143245 patch, following JDK-8254166
+- Remove upstreamed patch PR3519
+- Use RSA as default for keytool, as DSA is disabled in all crypto policies except LEGACY
+- Add directories to files directive for demo package.
+- Include a test in the RPM to check the build has the correct vendor information.
+- Use 'oj_' prefix on new vendor globals to avoid a conflict with RPM's vendor value.
+- Cleanup package descriptions and version number placement.
+
 * Tue Dec 22 2020 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.275.b01-6
 - fixed missing condition for fastdebug packages being counted as debug ones
 
