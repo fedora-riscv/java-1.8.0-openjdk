@@ -311,7 +311,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      0
+%global rpmrelease      1
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -2322,7 +2322,13 @@ done
 -- whether copy-jdk-configs is installed or not. If so, then configs are copied
 -- (copy_jdk_configs from %%{_libexecdir} used) or not copied at all
 local posix = require "posix"
-local debug = false
+
+if (os.getenv("debug") == "true") then
+  debug = true;
+  print("cjc: in spec debug is on")
+else 
+  debug = false;
+end
 
 SOURCE1 = "%{rpm_state_dir}/copy_jdk_configs.lua"
 SOURCE2 = "%{_libexecdir}/copy_jdk_configs.lua"
@@ -2530,6 +2536,11 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Fri Apr 29 2021 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.292.b10-1
+- adapted to debug handling  in newer cjc
+- The rest of the "rpm 4.17" patch must NOT be backported, as on rpm 4.16 and down, it would casue double execution
+
+
 * Tue Apr 13 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.292.b10-0
 - Update to aarch64-shenandoah-jdk8u292-b10 (GA)
 - Update release notes for 8u292-b10.
