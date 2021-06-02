@@ -138,10 +138,8 @@
 %global bootstrap_build 1
 
 # If you disable both builds, then the build fails
-# Note that the debug build requires the normal build for docs
-%global build_loop %{normal_build} %{fastdebug_build} %{slowdebug_build}
-# Test slowdebug first as it provides the best diagnostics
-%global rev_build_loop  %{slowdebug_build} %{fastdebug_build} %{normal_build}
+# Build and test slowdebug first as it provides the best diagnostics
+%global build_loop  %{slowdebug_build} %{fastdebug_build} %{normal_build}
 
 %global bootstrap_targets images
 %global release_targets images docs-zip
@@ -296,7 +294,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global shenandoah_project	aarch64-port
 %global shenandoah_repo		jdk8u-shenandoah
-%global shenandoah_revision    	aarch64-shenandoah-jdk8u292-b10
+%global shenandoah_revision    	aarch64-shenandoah-jdk8u302-b07
 # Define old aarch64/jdk8u tree variables for compatibility
 %global project         %{shenandoah_project}
 %global repo            %{shenandoah_repo}
@@ -311,12 +309,12 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      4
+%global rpmrelease      0
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
 # - N%%{?extraver}{?dist} for GA releases
-%global is_ga           1
+%global is_ga           0
 %if %{is_ga}
 %global milestone          fcs
 %global milestone_version  %{nil}
@@ -2054,7 +2052,7 @@ done
 %check
 
 # We test debug first as it will give better diagnostics on a crash
-for suffix in %{rev_build_loop} ; do
+for suffix in %{build_loop} ; do
 
 export JAVA_HOME=$(pwd)/%{buildoutputdir -- $suffix}/images/%{jdkimage}
 
@@ -2578,6 +2576,12 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Thu Jul 08 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.302.b07-0.0.ea
+- Update to aarch64-shenandoah-jdk8u302-b07 (EA)
+- Update release notes for 8u302-b07.
+- Switch to EA mode.
+- Use the "reverse" build loop (debug first) as the main and only build loop to get more diagnostics.
+
 * Mon Jun 07 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.302.b03-0.1.ea
 - Backport FIPS mode patch (RH1655466) to java-1.8.0-openjdk, simplifying provider removal.
 - nss.fips.cfg needs to be moved to %%{etcjavadir} and symlinked into the JDK, like nss.cfg
