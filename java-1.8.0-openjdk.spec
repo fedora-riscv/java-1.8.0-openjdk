@@ -22,6 +22,8 @@
 %bcond_without slowdebug
 # Enable release builds by default on relevant arches.
 %bcond_without release
+# Remove build artifacts by default
+%bcond_with artifacts
 
 # The -g flag says to use strip -g instead of full strip on DSOs or EXEs.
 # This fixes detailed NMT and other tools which need minimal debug info.
@@ -294,7 +296,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global shenandoah_project	aarch64-port
 %global shenandoah_repo		jdk8u-shenandoah
-%global shenandoah_revision    	aarch64-shenandoah-jdk8u302-b08
+%global shenandoah_revision    	aarch64-shenandoah-jdk8u312-b07
 # Define old aarch64/jdk8u tree variables for compatibility
 %global project         %{shenandoah_project}
 %global repo            %{shenandoah_repo}
@@ -309,7 +311,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      2
+%global rpmrelease      1
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -343,6 +345,7 @@
 %global jdkimage       j2sdk-image
 # output dir stub
 %define buildoutputdir() %{expand:build/jdk8.build%{?1}}
+%define installoutputdir() %{expand:install/jdk8.install%{?1}}
 # we can copy the javadoc to not arched dir, or make it not noarch
 %define uniquejavadocdir()    %{expand:%{fullversion}%{?1}}
 # main id and dir of this jdk
@@ -352,7 +355,7 @@
 # fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349
 #         https://bugzilla.redhat.com/show_bug.cgi?id=1590796#c14
 #         https://bugzilla.redhat.com/show_bug.cgi?id=1655938
-%global _privatelibs libattach[.]so.*|libawt_headless[.]so.*|libawt[.]so.*|libawt_xawt[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libhprof[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas_unix[.]so.*|libjava_crw_demo[.]so.*|libjavajpeg[.]so.*|libjdwp[.]so.*|libjli[.]so.*|libjsdt[.]so.*|libjsoundalsa[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libnpt[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libsplashscreen[.]so.*|libsunec[.]so.*|libunpack[.]so.*|libzip[.]so.*|lib[.]so\\(SUNWprivate_.*
+%global _privatelibs libattach[.]so.*|libawt_headless[.]so.*|libawt[.]so.*|libawt_xawt[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libhprof[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas_unix[.]so.*|libjava_crw_demo[.]so.*|libjavajpeg[.]so.*|libjdwp[.]so.*|libjli[.]so.*|libjsdt[.]so.*|libjsoundalsa[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libnpt[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libsplashscreen[.]so.*|libsunec[.]so.*|libsystemconf[.]so.*|libunpack[.]so.*|libzip[.]so.*|lib[.]so\\(SUNWprivate_.*
 %global _publiclibs libjawt[.]so.*|libjava[.]so.*|libjvm[.]so.*|libverify[.]so.*|libjsig[.]so.*
 %if %is_system_jdk
 %global __provides_exclude ^(%{_privatelibs})$
@@ -805,6 +808,7 @@ exit 0
 %endif
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libsctp.so
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libsunec.so
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libsystemconf.so
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libunpack.so
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libverify.so
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libzip.so
@@ -1044,8 +1048,8 @@ exit 0
 %define files_javadoc() %{expand:
 %defattr(-,root,root,-)
 %doc %{_javadocdir}/%{uniquejavadocdir -- %{?1}}
-#javadoc is in jdk8 noarch, so also licnese file must be treated like it
-%license %{buildoutputdir -- %{?1}}/images/%{jdkimage}/jre/LICENSE
+#javadoc is in jdk8 noarch, so also license file must be treated like it
+%license %{installoutputdir -- %{?1}}/images/%{jdkimage}/jre/LICENSE
 %if %is_system_jdk
 %if %{is_release_build -- %{?1}}
 %ghost %{_javadocdir}/java
@@ -1056,8 +1060,8 @@ exit 0
 %define files_javadoc_zip() %{expand:
 %defattr(-,root,root,-)
 %doc %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip
-#javadoc is in jdk8 noarch, so also licnese file must be treated like it
-%license %{buildoutputdir -- %{?1}}/images/%{jdkimage}/jre/LICENSE
+#javadoc is in jdk8 noarch, so also license file must be treated like it
+%license %{installoutputdir -- %{?1}}/images/%{jdkimage}/jre/LICENSE
 %if %is_system_jdk
 %if %{is_release_build -- %{?1}}
 %ghost %{_javadocdir}/java-zip
@@ -1112,8 +1116,6 @@ Requires: copy-jdk-configs >= 4.0
 OrderWithRequires: copy-jdk-configs
 # for printing support
 Requires: cups-libs
-# for FIPS PKCS11 provider
-Requires: nss
 # Post requires alternatives to install tool alternatives
 Requires(post):   %{alternatives_requires}
 # Postun requires alternatives to uninstall tool alternatives
@@ -1238,7 +1240,7 @@ URL:      http://openjdk.java.net/
 # FILE_NAME_ROOT=%%{shenandoah_project}-%%{shenandoah_repo}-${VERSION}
 # REPO_ROOT=<path to checked-out repository> generate_source_tarball.sh
 # where the source is obtained from http://hg.openjdk.java.net/%%{project}/%%{repo}
-Source0: %{shenandoah_project}-%{shenandoah_repo}-%{shenandoah_revision}-4curve-clean.tar.xz
+Source0: %{shenandoah_project}-%{shenandoah_repo}-%{shenandoah_revision}-4curve.tar.xz
 
 # Custom README for -src subpackage
 Source2:  README.md
@@ -1308,6 +1310,13 @@ Patch1002: rh1760838-fips_default_keystore_type.patch
 Patch1004: rh1860986-disable_tlsv1.3_in_fips_mode.patch
 # RH1906862: Always initialise JavaSecuritySystemConfiguratorAccess
 Patch1005: rh1906862-always_initialise_configurator_access.patch
+# RH1929465: Improve system FIPS detection
+Patch1006: rh1929465-improve_system_FIPS_detection-root.patch
+Patch1007: rh1929465-improve_system_FIPS_detection-jdk.patch
+# RH1996182: Login to the NSS software token in FIPS mode
+Patch1008: rh1996182-login_to_nss_software_token.patch
+# RH1991003: Allow plain key import unless com.redhat.fips.plainKeySupport is set to false
+Patch1011: rh1991003-enable_fips_keys_import.patch
 
 #############################################
 #
@@ -1451,8 +1460,8 @@ BuildRequires: libXinerama-devel
 BuildRequires: libXrender-devel
 BuildRequires: libXt-devel
 BuildRequires: libXtst-devel
-# Requirements for setting up the nss.cfg
-BuildRequires: nss-devel
+# Requirements for setting up the nss.cfg and FIPS support
+BuildRequires: nss-devel >= 3.53
 BuildRequires: pkgconfig
 BuildRequires: xorg-x11-proto-devel
 BuildRequires: zip
@@ -1830,6 +1839,10 @@ sh %{SOURCE12}
 %patch1003
 %patch1004
 %patch1005
+%patch1006
+%patch1007
+%patch1008
+%patch1011
 
 # RHEL-only patches
 %if ! 0%{?fedora} && 0%{?rhel} <= 7
@@ -1927,9 +1940,10 @@ export EXTRA_CFLAGS EXTRA_ASFLAGS
 
 function buildjdk() {
     local outputdir=${1}
-    local buildjdk=${2}
-    local maketargets=${3}
-    local debuglevel=${4}
+    local installdir=${2}
+    local buildjdk=${3}
+    local maketargets=${4}
+    local debuglevel=${5}
 
     local top_srcdir_abs_path=$(pwd)/%{top_level_dir_name}
     # Variable used in hs_err hook on build failures
@@ -1939,7 +1953,7 @@ function buildjdk() {
     ${buildjdk}/bin/java -version
     echo "Building 8u%{updatever}-%{buildver}, milestone %{milestone}"
 
-    mkdir -p ${outputdir}
+    mkdir -p ${outputdir} ${installdir}
     pushd ${outputdir}
 
     bash ${top_srcdir_abs_path}/configure \
@@ -1961,6 +1975,7 @@ function buildjdk() {
     --with-vendor-vm-bug-url="%{oj_vendor_bug_url}" \
     --with-boot-jdk=${buildjdk} \
     --with-debug-level=${debuglevel} \
+    --enable-sysconf-nss \
     --enable-unlimited-crypto \
     --with-zlib=system \
     --with-libjpeg=system \
@@ -1999,6 +2014,23 @@ function buildjdk() {
     find images/%{jdkimage}/bin/ -exec chmod +x {} \;
 
     popd >& /dev/null
+
+    echo "Installing build from ${outputdir} to ${installdir}..."
+    echo "Installing images..."
+    mv ${outputdir}/images ${installdir}
+    if [ -d ${outputdir}/bundles ] ; then
+	echo "Installing bundles...";
+	mv ${outputdir}/bundles ${installdir} ;
+    fi
+    if [ -d ${outputdir}/docs ] ; then
+	echo "Installing docs...";
+	mv ${outputdir}/docs ${installdir} ;
+    fi
+
+%if !%{with artifacts}
+    echo "Removing output directory...";
+    rm -rf ${outputdir}
+%endif
 }
 
 for suffix in %{build_loop} ; do
@@ -2012,6 +2044,8 @@ fi
 systemjdk=/usr/lib/jvm/java-openjdk
 builddir=%{buildoutputdir -- $suffix}
 bootbuilddir=boot${builddir}
+installdir=%{installoutputdir -- $suffix}
+bootinstalldir=boot${installdir}
 
 # Debug builds don't need same targets as release for
 # build speed-up
@@ -2021,15 +2055,15 @@ if echo $debugbuild | grep -q "debug" ; then
 fi
 
 %if %{bootstrap_build}
-buildjdk ${bootbuilddir} ${systemjdk} "%{bootstrap_targets}" ${debugbuild}
-buildjdk ${builddir} $(pwd)/${bootbuilddir}/images/%{jdkimage} "${maketargets}" ${debugbuild}
-rm -rf ${bootbuilddir}
+buildjdk ${bootbuilddir} ${bootinstalldir} ${systemjdk} "%{bootstrap_targets}" ${debugbuild}
+buildjdk ${builddir} ${installdir} $(pwd)/${bootinstalldir}/images/%{jdkimage} "${maketargets}" ${debugbuild}
+%{!?with_artifacts:rm -rf ${bootinstalldir}}
 %else
-buildjdk ${builddir} ${systemjdk} "${maketargets}" ${debugbuild}
+buildjdk ${builddir} ${installdir} ${systemjdk} "${maketargets}" ${debugbuild}
 %endif
 
 # Install nss.cfg right away as we will be using the JRE above
-export JAVA_HOME=$(pwd)/%{buildoutputdir -- $suffix}/images/%{jdkimage}
+export JAVA_HOME=$(pwd)/%{installoutputdir -- $suffix}/images/%{jdkimage}
 
 # Install nss.cfg right away as we will be using the JRE above
 install -m 644 nss.cfg $JAVA_HOME/jre/lib/security/
@@ -2055,7 +2089,7 @@ done
 # We test debug first as it will give better diagnostics on a crash
 for suffix in %{build_loop} ; do
 
-export JAVA_HOME=$(pwd)/%{buildoutputdir -- $suffix}/images/%{jdkimage}
+export JAVA_HOME=$(pwd)/%{installoutputdir -- $suffix}/images/%{jdkimage}
 
 # Check unlimited policy has been used
 $JAVA_HOME/bin/javac -d . %{SOURCE13}
@@ -2170,7 +2204,7 @@ STRIP_KEEP_SYMTAB=libjvm*
 for suffix in %{build_loop} ; do
 
 # Install the jdk
-pushd %{buildoutputdir -- $suffix}/images/%{jdkimage}
+pushd %{installoutputdir -- $suffix}/images/%{jdkimage}
 
 # Install jsa directories so we can owe them
 mkdir -p $RPM_BUILD_ROOT%{_jvmdir}/%{jredir -- $suffix}/lib/%{archinstall}/server/
@@ -2237,9 +2271,9 @@ popd
 if ! echo $suffix | grep -q "debug" ; then
   # Install Javadoc documentation
   install -d -m 755 $RPM_BUILD_ROOT%{_javadocdir}
-  cp -a %{buildoutputdir -- $suffix}/docs $RPM_BUILD_ROOT%{_javadocdir}/%{uniquejavadocdir -- $suffix}
+  cp -a %{installoutputdir -- $suffix}/docs $RPM_BUILD_ROOT%{_javadocdir}/%{uniquejavadocdir -- $suffix}
   built_doc_archive=`echo "jdk-%{javaver}_%{updatever}%{milestone_version}$suffix-%{buildver}-docs.zip" | sed  s/slowdebug/debug/`
-  cp -a %{buildoutputdir -- $suffix}/bundles/$built_doc_archive  $RPM_BUILD_ROOT%{_javadocdir}/%{uniquejavadocdir -- $suffix}.zip
+  cp -a %{installoutputdir -- $suffix}/bundles/$built_doc_archive  $RPM_BUILD_ROOT%{_javadocdir}/%{uniquejavadocdir -- $suffix}.zip
 fi
 
 # Install release notes
@@ -2586,6 +2620,21 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Fri Oct 15 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.312.b07-1
+- Update to aarch64-shenandoah-jdk8u312-b07 (GA)
+- Update release notes for 8u312-b07.
+- Remove "-clean" suffix as no 8u312 builds are unclean.
+- Port FIPS system detection support to OpenJDK 8u
+- Minor code cleanups on FIPS detection patch and check for SECMOD_GetSystemFIPSEnabled in configure.
+- Remove unneeded Requires on NSS as it will now be dynamically linked and detected by RPM.
+- Allow plain key import to be disabled with -Dcom.redhat.fips.plainKeySupport=false
+- Reduce disk footprint by removing build artifacts by default.
+
+* Thu Oct 07 2021 Martin Balao <mbalao@redhat.com> - 1:1.8.0.312.b07-1
+- Detect FIPS using SECMOD_GetSystemFIPSEnabled in the new libsystemconf JDK library.
+- Add patch to login to the NSS software token when in FIPS mode.
+- Add patch to allow plain key import.
+
 * Mon Aug 30 2021 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.302.b08-2
 - alternatives creation moved to posttrans
 - Thus fixing the old reisntall issue:
@@ -2661,7 +2710,7 @@ cjc.mainProgram(args)
 - removed patch1 rh1648242-accessible_toolkit_crash_do_not_break_jvm.patch and patch3 rh1648644-java_access_bridge_privileged_security.patch
 - removal of accessibility{,-slowdebug,-fastdebug} subpackages
 - no longer creating symlinks of %%{_libdir}/java-atk-wrapper/libatk-wrapper.so.0 libatk-wrapper.so and  %%{_libdir}/java-atk-wrapper/java-atk-wrapper.jar  java-atk-wrapper.jar
-- no longer creating %%{_jvmdir}/%{jredir -- $suffix}/lib/accessibility.properties with content of "assistive_technologies=org.GNOME.Accessibility.AtkWrapper"
+- no longer creating %%{_jvmdir}/%%{jredir -- $suffix}/lib/accessibility.properties with content of "assistive_technologies=org.GNOME.Accessibility.AtkWrapper"
 - removal of accessibility{,-slowdebug,-fastdebug} subpackages files sections
 
 * Mon Mar 22 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.292.b06-0.0.ea
