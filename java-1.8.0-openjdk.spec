@@ -86,13 +86,18 @@
 %global ppc64be         ppc64 ppc64p7
 # Set of architectures which support multiple ABIs
 %global multilib_arches %{power64} sparc64 x86_64
-# Set of architectures for which we build debug builds
+# Set of architectures for which we build slowdebug builds
 %global debug_arches    %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64}
+# Set of architectures for which we build fastdebug builds
+%global fastdebug_arches x86_64 ppc64le aarch64
 # Set of architectures with a Just-In-Time (JIT) compiler
 %global jit_arches      %{debug_arches}
+# Set of architectures which use the Zero assembler port (!jit_arches)
+%global zero_arches %{arm} ppc s390 s390x
+# Set of architectures which run a full bootstrap cycle
+%global bootstrap_arches %{jit_arches} %{zero_arches}
 # Set of architectures which support SystemTap tapsets
 %global systemtap_arches %{jit_arches}
-%global fastdebug_arches x86_64 ppc64le aarch64
 # Set of architectures which support the serviceability agent
 %global sa_arches       %{ix86} x86_64 sparcv9 sparc64 %{aarch64}
 # Set of architectures which support class data sharing
@@ -137,11 +142,16 @@
 %else
 %global fastdebug_build %{nil}
 %endif
-%global bootstrap_build 1
 
 # If you disable both builds, then the build fails
 # Build and test slowdebug first as it provides the best diagnostics
 %global build_loop  %{slowdebug_build} %{fastdebug_build} %{normal_build}
+
+%ifarch %{bootstrap_arches}
+%global bootstrap_build true
+%else
+%global bootstrap_build false
+%endif
 
 %global bootstrap_targets images
 %global release_targets images docs-zip
@@ -294,9 +304,9 @@
 %endif
 
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
-%global shenandoah_project	aarch64-port
-%global shenandoah_repo		jdk8u-shenandoah
-%global shenandoah_revision    	aarch64-shenandoah-jdk8u312-b07
+%global shenandoah_project	openjdk
+%global shenandoah_repo		shenandoah-jdk8u
+%global shenandoah_revision    	aarch64-shenandoah-jdk8u322-b06
 # Define old aarch64/jdk8u tree variables for compatibility
 %global project         %{shenandoah_project}
 %global repo            %{shenandoah_repo}
@@ -311,7 +321,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      2
+%global rpmrelease      1
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -1104,8 +1114,8 @@ Requires: ca-certificates
 # Require javapackages-filesystem for ownership of /usr/lib/jvm/ and macros
 Requires: javapackages-filesystem
 # Require zoneinfo data provided by tzdata-java subpackage.
-# 2021a required as of JDK-8260356 in April CPU
-Requires: tzdata-java >= 2021a
+# 2021e required as of JDK-8275766 in January 2022 CPU
+Requires: tzdata-java >= 2021e
 # for support of kernel stream control
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
@@ -1481,8 +1491,8 @@ BuildRequires: java-1.8.0-openjdk-devel
 %ifnarch %{jit_arches}
 BuildRequires: libffi-devel
 %endif
-# 2021a required as of JDK-8260356 in April CPU
-BuildRequires: tzdata-java >= 2021a
+# 2021e required as of JDK-8275766 in January 2022 CPU
+BuildRequires: tzdata-java >= 2021e
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
@@ -2051,19 +2061,23 @@ installdir=%{installoutputdir -- $suffix}
 bootinstalldir=boot${installdir}
 
 # Debug builds don't need same targets as release for
-# build speed-up
-maketargets="%{release_targets}"
+# build speed-up. We also avoid bootstrapping these
+# slower builds.
 if echo $debugbuild | grep -q "debug" ; then
   maketargets="%{debug_targets}"
+  run_bootstrap=false
+else
+  maketargets="%{release_targets}"
+  run_bootstrap=%{bootstrap_build}
 fi
 
-%if %{bootstrap_build}
-buildjdk ${bootbuilddir} ${bootinstalldir} ${systemjdk} "%{bootstrap_targets}" ${debugbuild}
-buildjdk ${builddir} ${installdir} $(pwd)/${bootinstalldir}/images/%{jdkimage} "${maketargets}" ${debugbuild}
-%{!?with_artifacts:rm -rf ${bootinstalldir}}
-%else
-buildjdk ${builddir} ${installdir} ${systemjdk} "${maketargets}" ${debugbuild}
-%endif
+if ${run_bootstrap} ; then
+  buildjdk ${bootbuilddir} ${bootinstalldir} ${systemjdk} "%{bootstrap_targets}" ${debugbuild}
+  buildjdk ${builddir} ${installdir} $(pwd)/${bootinstalldir}/images/%{jdkimage} "${maketargets}" ${debugbuild}
+  %{!?with_artifacts:rm -rf ${bootinstalldir}}
+else
+  buildjdk ${builddir} ${installdir} ${systemjdk} "${maketargets}" ${debugbuild}
+fi
 
 # Install nss.cfg right away as we will be using the JRE above
 export JAVA_HOME=$(pwd)/%{installoutputdir -- $suffix}/images/%{jdkimage}
@@ -2623,6 +2637,13 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Mon Jan 24 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b06-1
+- Update to aarch64-shenandoah-jdk8u322-b06 (GA)
+- Update release notes for 8u322-b06.
+- Require tzdata 2021e as of JDK-8275766.
+- Update tarball generation script to use git following shenandoah-jdk8u's move to github
+- Turn off bootstrapping for slow debug builds, which are particularly slow on ppc64le.
+
 * Wed Nov 03 2021 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.312.b07-2
 - Use 'sql:' prefix in nss.fips.cfg as F35+ no longer ship the legacy
   secmod.db file as part of nss
