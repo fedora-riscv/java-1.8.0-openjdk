@@ -115,15 +115,10 @@
 %global share_arches    %{ix86} x86_64 sparcv9 sparc64 %{aarch64}
 # Set of architectures which support JFR
 %global jfr_arches      %{jit_arches}
-# Set of architectures where we verify backtraces with gdb (ideally all)
-# Temporarily disable check on x86, x86_64, ppc64le and s390x as gdb crashes
-# ../../gdb/objfiles.h:510: internal-error: sect_index_data not initialized
-# A problem internal to GDB has been detected,
-# further debugging may prove unreliable.
-# See https://bugzilla.redhat.com/show_bug.cgi?id=2041970
-%global gdb_arches sparcv9 sparc64 %{aarch64} %{arm} ppc s390
 # Set of architectures for which alt-java has SSB mitigation
 %global ssbd_arches x86_64
+# Set of architectures where we verify backtraces with gdb
+%global gdb_arches %{jit_arches} %{zero_arches}
 
 # By default, we build a debug build during main build on JIT architectures
 %if %{with slowdebug}
@@ -332,9 +327,9 @@
 %endif
 
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
-%global shenandoah_project	aarch64-port
-%global shenandoah_repo		jdk8u-shenandoah
-%global shenandoah_revision    	aarch64-shenandoah-jdk8u322-b04
+%global shenandoah_project	openjdk
+%global shenandoah_repo		shenandoah-jdk8u
+%global shenandoah_revision    	aarch64-shenandoah-jdk8u322-b06
 # Define old aarch64/jdk8u tree variables for compatibility
 %global project         %{shenandoah_project}
 %global repo            %{shenandoah_repo}
@@ -349,12 +344,12 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      2
+%global rpmrelease      1
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
 # - N%%{?extraver}{?dist} for GA releases
-%global is_ga           0
+%global is_ga           1
 %if %{is_ga}
 %global milestone          fcs
 %global milestone_version  %{nil}
@@ -1146,8 +1141,8 @@ Requires: ca-certificates
 # Require javapackages-filesystem for ownership of /usr/lib/jvm/ and macros
 Requires: javapackages-filesystem
 # Require zoneinfo data provided by tzdata-java subpackage.
-# 2021c required as of JDK-8274407 in January 2022 CPU
-Requires: tzdata-java >= 2021c
+# 2021e required as of JDK-8275766 in January 2022 CPU
+Requires: tzdata-java >= 2021e
 # for support of kernel stream control
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
@@ -1359,6 +1354,9 @@ Patch1007: rh1929465-improve_system_FIPS_detection-jdk.patch
 Patch1008: rh1996182-login_to_nss_software_token.patch
 # RH1991003: Allow plain key import unless com.redhat.fips.plainKeySupport is set to false
 Patch1011: rh1991003-enable_fips_keys_import.patch
+# RH2021263: Resolve outstanding FIPS issues
+Patch1014: rh2021263-fips_ensure_security_initialised.patch
+Patch1015: rh2021263-fips_missing_native_returns.patch
 
 #############################################
 #
@@ -1519,8 +1517,8 @@ BuildRequires: java-%{buildjdkver}-openjdk-devel >= 1.7.0.151-2.6.11.3
 %ifarch %{zero_arches}
 BuildRequires: libffi-devel
 %endif
-# 2021c required as of JDK-8274407 in January 2022 CPU
-BuildRequires: tzdata-java >= 2021c
+# 2021e required as of JDK-8275766 in January 2022 CPU
+BuildRequires: tzdata-java >= 2021e
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
@@ -1886,6 +1884,8 @@ sh %{SOURCE12}
 %patch1007
 %patch1008
 %patch1011
+%patch1014
+%patch1015
 
 # RHEL-only patches
 %if ! 0%{?fedora} && 0%{?rhel} <= 7
@@ -2688,6 +2688,17 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Wed Feb 16 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b06-1
+- Update to aarch64-shenandoah-jdk8u322-b06 (EA)
+- Update release notes for 8u322-b06.
+- Switch to GA mode for final release.
+- Require tzdata 2021e as of JDK-8275766.
+- Update tarball generation script to use git following shenandoah-jdk8u's move to github
+- Fix FIPS issues in native code and with initialisation of java.security.Security
+
+* Mon Feb 07 2022 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.322.b06-1
+- Re-enable gdb backtrace check.
+
 * Thu Jan 20 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b04-0.2.ea
 - Temporarily move x86 to use Zero in order to get a working build
 - Introduce architecture restriction logic for the gdb test. (RH2041970)
