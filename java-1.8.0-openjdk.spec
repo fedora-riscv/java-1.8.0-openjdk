@@ -344,7 +344,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      1
+%global rpmrelease      2
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -2688,6 +2688,9 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Wed Feb 16 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b06-2
+- Fix FIPS issues in native code and with initialisation of java.security.Security
+
 * Wed Feb 16 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b06-1
 - Update to aarch64-shenandoah-jdk8u322-b06 (EA)
 - Update release notes for 8u322-b06.
