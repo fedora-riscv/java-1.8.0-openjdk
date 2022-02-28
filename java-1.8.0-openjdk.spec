@@ -321,7 +321,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      2
+%global rpmrelease      3
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -1330,6 +1330,7 @@ Patch1011: rh1991003-enable_fips_keys_import.patch
 # RH2021263: Resolve outstanding FIPS issues
 Patch1014: rh2021263-fips_ensure_security_initialised.patch
 Patch1015: rh2021263-fips_missing_native_returns.patch
+Patch1016: rh2021263-fips_separate_policy_and_fips_init.patch
 
 #############################################
 #
@@ -1862,6 +1863,7 @@ sh %{SOURCE12}
 %patch1011
 %patch1014
 %patch1015
+%patch1016
 
 # RHEL-only patches
 %if ! 0%{?fedora} && 0%{?rhel} <= 7
@@ -2642,6 +2644,9 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Tue Feb 22 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b06-3
+- Separate crypto policy initialisation from FIPS initialisation, now they are no longer interdependent
+
 * Mon Jan 24 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b06-2
 - Fix FIPS issues in native code and with initialisation of java.security.Security
 
