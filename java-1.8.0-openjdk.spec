@@ -24,6 +24,15 @@
 %bcond_without release
 # Remove build artifacts by default
 %bcond_with artifacts
+# Build a fresh libjvm.so for use in a copy of the bootstrap JDK
+%bcond_without fresh_libjvm
+
+# Define whether to use the bootstrap JDK directly or with a fresh libjvm.so
+%if %{with fresh_libjvm}
+%global build_hotspot_first 1
+%else
+%global build_hotspot_first 0
+%endif
 
 # The -g flag says to use strip -g instead of full strip on DSOs or EXEs.
 # This fixes detailed NMT and other tools which need minimal debug info.
@@ -91,7 +100,7 @@
 # Set of architectures for which we build fastdebug builds
 %global fastdebug_arches x86_64 ppc64le aarch64
 # Set of architectures with a Just-In-Time (JIT) compiler
-%global jit_arches      %{debug_arches}
+%global jit_arches      %{aarch64} %{ix86} %{power64} sparcv9 sparc64 x86_64
 # Set of architectures which use the Zero assembler port (!jit_arches)
 %global zero_arches %{arm} ppc s390 s390x
 # Set of architectures which run a full bootstrap cycle
@@ -104,10 +113,12 @@
 # See https://bugzilla.redhat.com/show_bug.cgi?id=513605
 # MetaspaceShared::generate_vtable_methods is not implemented for the PPC JIT
 %global share_arches    %{ix86} x86_64 sparcv9 sparc64 %{aarch64}
+# Set of architectures which support JFR
 %global jfr_arches      %{jit_arches}
-
 # Set of architectures for which alt-java has SSB mitigation
 %global ssbd_arches x86_64
+# Set of architectures where we verify backtraces with gdb
+%global gdb_arches %{jit_arches} %{zero_arches}
 
 # By default, we build a debug build during main build on JIT architectures
 %if %{with slowdebug}
@@ -143,7 +154,7 @@
 %global fastdebug_build %{nil}
 %endif
 
-# If you disable both builds, then the build fails
+# If you disable all builds, then the build fails
 # Build and test slowdebug first as it provides the best diagnostics
 %global build_loop  %{slowdebug_build} %{fastdebug_build} %{normal_build}
 
@@ -156,6 +167,18 @@
 %global bootstrap_targets images
 %global release_targets images docs-zip
 %global debug_targets images
+# Target to use to just build HotSpot
+%global hotspot_target hotspot
+
+# JDK to use for bootstrapping
+# Use OpenJDK 7 where available (on RHEL) to avoid
+# having to use the rhel-7.x-java-unsafe-candidate hack
+%if ! 0%{?fedora} && 0%{?rhel} <= 7
+%global buildjdkver 1.7.0
+%else
+%global buildjdkver 1.8.0
+%endif
+%global bootjdk /usr/lib/jvm/java-%{buildjdkver}-openjdk
 
 # Disable LTO as this causes build failures at the moment.
 # See RHBZ#1861401
@@ -306,7 +329,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global shenandoah_project	openjdk
 %global shenandoah_repo		shenandoah-jdk8u
-%global shenandoah_revision    	aarch64-shenandoah-jdk8u322-b06
+%global shenandoah_revision    	shenandoah-jdk8u332-b09
 # Define old aarch64/jdk8u tree variables for compatibility
 %global project         %{shenandoah_project}
 %global repo            %{shenandoah_repo}
@@ -321,7 +344,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      6
+%global rpmrelease      1
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -901,7 +924,9 @@ exit 0
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libnio.so
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libnpt.so
 %ifarch %{sa_arches}
+%ifnarch %{zero_arches}
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libsaproc.so
+%endif
 %endif
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libsctp.so
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libsunec.so
@@ -1039,7 +1064,9 @@ exit 0
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/jconsole.jar
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/orb.idl
 %ifarch %{sa_arches}
+%ifnarch %{zero_arches}
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/sa-jdi.jar
+%endif
 %endif
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/dt.jar
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/jexec
@@ -1449,8 +1476,8 @@ Patch600: rh1750419-redhat_alt_java.patch
 # JDK-8218811: replace open by os::open in hotspot coding
 # This fixes a GCC 10 build issue
 Patch111: jdk8218811-perfMemory_linux.patch
-# Similar for GCC 11
-Patch112: %{name}-gcc11.patch
+# JDK-8281098, PR3836: Extra compiler flags not passed to adlc build
+Patch112: jdk8281098-pr3836-pass_compiler_flags_to_adlc.patch
 
 #############################################
 #
@@ -1495,6 +1522,10 @@ Patch203: jdk8042159-allow_using_system_installed_lcms2-root.patch
 Patch204: jdk8042159-allow_using_system_installed_lcms2-jdk.patch
 # JDK-8195607, PR3776, RH1760437: sun/security/pkcs11/Secmod/TestNssDbSqlite.java failed with "NSS initialization failed" on NSS 3.34.1
 Patch580: jdk8195607-pr3776-rh1760437-nss_sqlite_db_config.patch
+# JDK-8257794: Zero: assert(istate->_stack_limit == istate->_thread->last_Java_sp() + 1) failed: wrong on Linux/x86_32
+Patch581: jdk8257794-remove_broken_assert.patch
+# JDK-8282231: x86-32: runtime call to SharedRuntime::ldiv corrupts registers
+Patch582: jdk8282231-x86_32-missing_call_effects.patch
 
 #############################################
 #
@@ -1570,16 +1601,10 @@ BuildRequires: pkgconfig
 BuildRequires: xorg-x11-proto-devel
 BuildRequires: zip
 BuildRequires: unzip
-# Use OpenJDK 7 where available (on RHEL) to avoid
-# having to use the rhel-7.x-java-unsafe-candidate hack
-%if ! 0%{?fedora} && 0%{?rhel} <= 7
 # Require a boot JDK which doesn't fail due to RH1482244
-BuildRequires: java-1.7.0-openjdk-devel >= 1.7.0.151-2.6.11.3
-%else
-BuildRequires: java-1.8.0-openjdk-devel
-%endif
+BuildRequires: java-%{buildjdkver}-openjdk-devel >= 1.7.0.151-2.6.11.3
 # Zero-assembler build requirement
-%ifnarch %{jit_arches}
+%ifarch %{zero_arches}
 BuildRequires: libffi-devel
 %endif
 # 2021e required as of JDK-8275766 in January 2022 CPU
@@ -1935,6 +1960,8 @@ sh %{SOURCE12}
 %patch111
 %patch112
 %patch580
+%patch581
+%patch582
 
 # RPM-only fixes
 %patch539
@@ -2048,10 +2075,9 @@ export EXTRA_CFLAGS EXTRA_ASFLAGS
 
 function buildjdk() {
     local outputdir=${1}
-    local installdir=${2}
-    local buildjdk=${3}
-    local maketargets=${4}
-    local debuglevel=${5}
+    local buildjdk=${2}
+    local maketargets="${3}"
+    local debuglevel=${4}
 
     local top_srcdir_abs_path=$(pwd)/%{top_level_dir_name}
     # Variable used in hs_err hook on build failures
@@ -2061,7 +2087,7 @@ function buildjdk() {
     ${buildjdk}/bin/java -version
     echo "Building 8u%{updatever}-%{buildver}, milestone %{milestone}"
 
-    mkdir -p ${outputdir} ${installdir}
+    mkdir -p ${outputdir}
     pushd ${outputdir}
 
     bash ${top_srcdir_abs_path}/configure \
@@ -2070,7 +2096,7 @@ function buildjdk() {
 %else
     --disable-jfr \
 %endif
-%ifnarch %{jit_arches}
+%ifarch %{zero_arches}
     --with-jvm-variants=zero \
 %endif
     --with-native-debug-symbols=internal \
@@ -2106,24 +2132,16 @@ function buildjdk() {
 	SCTP_WERROR= \
 	${maketargets} || ( pwd; find ${top_srcdir_abs_path} ${top_builddir_abs_path} -name "hs_err_pid*.log" | xargs cat && false )
 
-    # the build (erroneously) removes read permissions from some jars
-    # this is a regression in OpenJDK 7 (our compiler):
-    # http://icedtea.classpath.org/bugzilla/show_bug.cgi?id=1437
-    find images/%{jdkimage} -iname '*.jar' -exec chmod ugo+r {} \;
-    chmod ugo+r images/%{jdkimage}/lib/ct.sym
+    popd
+}
 
-    # remove redundant *diz and *debuginfo files
-    find images/%{jdkimage} -iname '*.diz' -exec rm -v {} \;
-    find images/%{jdkimage} -iname '*.debuginfo' -exec rm -v {} \;
-
-    # Build screws up permissions on binaries
-    # https://bugs.openjdk.java.net/browse/JDK-8173610
-    find images/%{jdkimage} -iname '*.so' -exec chmod +x {} \;
-    find images/%{jdkimage}/bin/ -exec chmod +x {} \;
-
-    popd >& /dev/null
+function installjdk() {
+    local outputdir=${1}
+    local installdir=${2}
+    local imagepath=${installdir}/images/%{jdkimage}
 
     echo "Installing build from ${outputdir} to ${installdir}..."
+    mkdir -p ${installdir}
     echo "Installing images..."
     mv ${outputdir}/images ${installdir}
     if [ -d ${outputdir}/bundles ] ; then
@@ -2139,7 +2157,34 @@ function buildjdk() {
     echo "Removing output directory...";
     rm -rf ${outputdir}
 %endif
+
+    if [ -d ${imagepath} ] ; then
+	# the build (erroneously) removes read permissions from some jars
+	# this is a regression in OpenJDK 7 (our compiler):
+	# http://icedtea.classpath.org/bugzilla/show_bug.cgi?id=1437
+	find ${imagepath} -iname '*.jar' -exec chmod ugo+r {} \;
+	chmod ugo+r ${imagepath}/lib/ct.sym
+
+	# remove redundant *diz and *debuginfo files
+	find ${imagepath} -iname '*.diz' -exec rm -v {} \;
+	find ${imagepath} -iname '*.debuginfo' -exec rm -v {} \;
+
+	# Build screws up permissions on binaries
+	# https://bugs.openjdk.java.net/browse/JDK-8173610
+	find ${imagepath} -iname '*.so' -exec chmod +x {} \;
+	find ${imagepath}/bin/ -exec chmod +x {} \;
+    fi
 }
+
+%if %{build_hotspot_first}
+  # Build a fresh libjvm.so first and use it to bootstrap
+  cp -LR --preserve=mode,timestamps %{bootjdk} newboot
+  systemjdk=$(pwd)/newboot
+  buildjdk build/newboot ${systemjdk} %{hotspot_target} "release" "bundled"
+  mv build/newboot/hotspot/dist/jre/lib/%{archinstall}/server/libjvm.so newboot/jre/lib/%{archinstall}/server
+%else
+  systemjdk=%{bootjdk}
+%endif
 
 for suffix in %{build_loop} ; do
 if [ "x$suffix" = "x" ] ; then
@@ -2149,7 +2194,6 @@ else
   debugbuild=`echo $suffix  | sed "s/-//g"`
 fi
 
-systemjdk=/usr/lib/jvm/java-openjdk
 builddir=%{buildoutputdir -- $suffix}
 bootbuilddir=boot${builddir}
 installdir=%{installoutputdir -- $suffix}
@@ -2167,11 +2211,14 @@ else
 fi
 
 if ${run_bootstrap} ; then
-  buildjdk ${bootbuilddir} ${bootinstalldir} ${systemjdk} "%{bootstrap_targets}" ${debugbuild}
-  buildjdk ${builddir} ${installdir} $(pwd)/${bootinstalldir}/images/%{jdkimage} "${maketargets}" ${debugbuild}
+  buildjdk ${bootbuilddir} ${systemjdk} "%{bootstrap_targets}" ${debugbuild}
+  installjdk ${bootbuilddir} ${bootinstalldir}
+  buildjdk ${builddir} $(pwd)/${bootinstalldir}/images/%{jdkimage} "${maketargets}" ${debugbuild}
+  installjdk ${builddir} ${installdir}
   %{!?with_artifacts:rm -rf ${bootinstalldir}}
 else
-  buildjdk ${builddir} ${installdir} ${systemjdk} "${maketargets}" ${debugbuild}
+  buildjdk ${builddir} ${systemjdk} "${maketargets}" ${debugbuild}
+  installjdk ${builddir} ${installdir}
 fi
 
 # Install nss.cfg right away as we will be using the JRE above
@@ -2292,7 +2339,9 @@ end
 run -version
 EOF
 
+%ifarch %{gdb_arches}
 grep 'JavaCallWrapper::JavaCallWrapper' gdb.out
+%endif
 
 # Check src.zip has all sources. See RHBZ#1130490
 jar -tf $JAVA_HOME/src.zip | grep 'sun.misc.Unsafe'
@@ -2732,6 +2781,24 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Mon Apr 18 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.332.b09-1
+- Update to shenandoah-jdk8u332-b09 (GA)
+- Update release notes for 8u332-b09.
+- Switch to GA mode for final release.
+
+* Mon Apr 18 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.332.b06-0.1.ea
+- Update to shenandoah-jdk8u332-b06 (EA)
+- Update release notes for shenandoah-8u332-b06.
+
+* Mon Apr 18 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.332.b01-0.1.ea
+- Update to shenandoah-jdk8u332-b01 (EA)
+- Update release notes for shenandoah-8u332-b01.
+- Switch to EA mode.
+
+* Wed Mar 16 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b06-7
+- Reinstate JIT builds on x86_32.
+- Add JDK-8282231 to fix missing CALL effects on x86_32.
+
 * Sat Feb 26 2022 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.322.b06-6
 - Storing and restoring alterntives during update manually
 - Fixing Bug 2001567 - update of JDK/JRE is removing its manually selected alterantives and select (as auto) system JDK/JRE
@@ -2752,14 +2819,59 @@ cjc.mainProgram(args)
 * Tue Feb 22 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b06-3
 - Separate crypto policy initialisation from FIPS initialisation, now they are no longer interdependent
 
-* Mon Jan 24 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b06-2
+* Wed Feb 16 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b06-2
 - Fix FIPS issues in native code and with initialisation of java.security.Security
 
-* Mon Jan 24 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b06-1
-- Update to aarch64-shenandoah-jdk8u322-b06 (GA)
+* Wed Feb 16 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b06-1
+- Update to aarch64-shenandoah-jdk8u322-b06 (EA)
 - Update release notes for 8u322-b06.
+- Switch to GA mode for final release.
+
+* Tue Feb 15 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b05-0.1.ea
+- Update to aarch64-shenandoah-jdk8u322-b05 (EA)
+- Update release notes for 8u322-b05.
 - Require tzdata 2021e as of JDK-8275766.
 - Update tarball generation script to use git following shenandoah-jdk8u's move to github
+
+* Mon Feb 07 2022 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.322.b04-0.3.ea
+- Re-enable gdb backtrace check.
+
+* Thu Jan 20 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b04-0.2.ea
+- Temporarily move x86 to use Zero in order to get a working build
+- Introduce architecture restriction logic for the gdb test. (RH2041970)
+- Disable on x86, x86_64, ppc64le & s390x while these are broken in rawhide.
+- Replace GCC 11 patch to remove use of the register keyword with correct fix to ADLC build (JDK-8281098)
+- Adjust JDK8199936/PR3533 -mstackrealign patch to instead pass -mincoming-stack-boundary=2 -mpreferred-stack-boundary=4
+- Refactor build functions so we can build just HotSpot without any attempt at installation.
+- Explicitly list JIT architectures rather than relying on those with slowdebug builds
+- Disable the serviceability agent on Zero architectures even when the architecture itself is supported
+- Add backport of JDK-8257794 to fix bogus assert on slowdebug x86-32 Zero builds
+- Resolves: rhbz#2045726
+- Related: rhbz#2051302
+- Related: rhbz#2041970
+
+* Thu Jan 20 2022 Fedora Release Engineering <releng@fedoraproject.org> - 1:1.8.0.322.b04-0.1.ea.1
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_36_Mass_Rebuild
+
+* Mon Jan 10 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b04-0.1.ea
+- Update to aarch64-shenandoah-jdk8u322-b04 (EA)
+- Update release notes for 8u322-b04.
+- Require tzdata 2021c as of JDK-8274407.
+
+* Fri Jan 07 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b03-0.1.ea
+- Update to aarch64-shenandoah-jdk8u322-b03 (EA)
+- Update release notes for 8u322-b03.
+
+* Fri Dec 17 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b02-0.1.ea
+- Update to aarch64-shenandoah-jdk8u322-b02 (EA)
+- Update release notes for 8u322-b02.
+
+* Tue Dec 14 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b01-0.1.ea
+- Update to aarch64-shenandoah-jdk8u322-b01 (EA)
+- Update release notes for 8u322-b01.
+- Switch to EA mode.
+
+* Mon Dec 06 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.312.b07-3
 - Turn off bootstrapping for slow debug builds, which are particularly slow on ppc64le.
 
 * Wed Nov 03 2021 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.312.b07-2
@@ -2769,17 +2881,49 @@ cjc.mainProgram(args)
 * Fri Oct 15 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.312.b07-1
 - Update to aarch64-shenandoah-jdk8u312-b07 (GA)
 - Update release notes for 8u312-b07.
-- Remove "-clean" suffix as no 8u312 builds are unclean.
+- Switch to GA mode for final release.
+
+* Thu Oct 07 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.312.b05-0.2.ea
+- Allow plain key import to be disabled with -Dcom.redhat.fips.plainKeySupport=false
+
+* Thu Oct 07 2021 Martin Balao <mbalao@redhat.com> - 1:1.8.0.312.b05-0.2.ea
+- Add patch to allow plain key import.
+
+* Thu Sep 30 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.312.b05-0.1.ea
+- Update to aarch64-shenandoah-jdk8u312-b05 (EA)
+- Update release notes for 8u312-b05.
+
+* Mon Sep 27 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.312.b04-0.2.ea
+- Reduce disk footprint by removing build artifacts by default.
+
+* Sun Sep 26 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.312.b04-0.1.ea
+- Update to aarch64-shenandoah-jdk8u312-b04 (EA)
+- Update release notes for 8u312-b04.
+
+* Tue Sep 14 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.312.b03-0.2.ea
+- Add patch to login to the NSS software token when in FIPS mode.
+
+* Mon Sep 13 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.312.b03-0.1.ea
+- Update to aarch64-shenandoah-jdk8u312-b03 (EA)
+- Update release notes for 8u312-b03.
+
+* Fri Sep 10 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.312.b02-0.1.ea
+- Update to aarch64-shenandoah-jdk8u312-b02 (EA)
+- Update release notes for 8u312-b02.
+
+* Wed Sep 01 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.312.b01-0.3.ea
 - Port FIPS system detection support to OpenJDK 8u
 - Minor code cleanups on FIPS detection patch and check for SECMOD_GetSystemFIPSEnabled in configure.
 - Remove unneeded Requires on NSS as it will now be dynamically linked and detected by RPM.
-- Allow plain key import to be disabled with -Dcom.redhat.fips.plainKeySupport=false
-- Reduce disk footprint by removing build artifacts by default.
 
-* Thu Oct 07 2021 Martin Balao <mbalao@redhat.com> - 1:1.8.0.312.b07-1
+* Wed Sep 01 2021 Martin Balao <mbalao@redhat.com> - 1:1.8.0.312.b01-0.3.ea
 - Detect FIPS using SECMOD_GetSystemFIPSEnabled in the new libsystemconf JDK library.
-- Add patch to login to the NSS software token when in FIPS mode.
-- Add patch to allow plain key import.
+
+* Wed Sep 01 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.312.b01-0.2.ea
+- Update to aarch64-shenandoah-jdk8u312-b01 (EA)
+- Update release notes for 8u312-b01.
+- Switch to EA mode.
+- Remove "-clean" suffix as no 8u312 builds are unclean.
 
 * Mon Aug 30 2021 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.302.b08-2
 - alternatives creation moved to posttrans
