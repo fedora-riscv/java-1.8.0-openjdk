@@ -329,7 +329,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global shenandoah_project	openjdk
 %global shenandoah_repo		shenandoah-jdk8u
-%global shenandoah_revision    	aarch64-shenandoah-jdk8u322-b06
+%global shenandoah_revision    	shenandoah-jdk8u332-b09
 # Define old aarch64/jdk8u tree variables for compatibility
 %global project         %{shenandoah_project}
 %global repo            %{shenandoah_repo}
@@ -344,7 +344,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      7
+%global rpmrelease      1
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -2781,6 +2781,20 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Mon Apr 18 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.332.b09-1
+- Update to shenandoah-jdk8u332-b09 (GA)
+- Update release notes for 8u332-b09.
+- Switch to GA mode for final release.
+
+* Mon Apr 18 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.332.b06-0.1.ea
+- Update to shenandoah-jdk8u332-b06 (EA)
+- Update release notes for shenandoah-8u332-b06.
+
+* Mon Apr 18 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.332.b01-0.1.ea
+- Update to shenandoah-jdk8u332-b01 (EA)
+- Update release notes for shenandoah-8u332-b01.
+- Switch to EA mode.
+
 * Wed Mar 16 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b06-7
 - Reinstate JIT builds on x86_32.
 - Add JDK-8282231 to fix missing CALL effects on x86_32.
@@ -2812,11 +2826,14 @@ cjc.mainProgram(args)
 - Update to aarch64-shenandoah-jdk8u322-b06 (EA)
 - Update release notes for 8u322-b06.
 - Switch to GA mode for final release.
+
+* Tue Feb 15 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b05-0.1.ea
+- Update to aarch64-shenandoah-jdk8u322-b05 (EA)
+- Update release notes for 8u322-b05.
 - Require tzdata 2021e as of JDK-8275766.
 - Update tarball generation script to use git following shenandoah-jdk8u's move to github
-- Fix FIPS issues in native code and with initialisation of java.security.Security
 
-* Mon Feb 07 2022 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.322.b06-1
+* Mon Feb 07 2022 Severin Gehwolf <sgehwolf@redhat.com> - 1:1.8.0.322.b04-0.3.ea
 - Re-enable gdb backtrace check.
 
 * Thu Jan 20 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.322.b04-0.2.ea
