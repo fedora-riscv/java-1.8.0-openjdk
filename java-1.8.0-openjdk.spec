@@ -158,10 +158,14 @@
 # Build and test slowdebug first as it provides the best diagnostics
 %global build_loop  %{slowdebug_build} %{fastdebug_build} %{normal_build}
 
+%if 0%{?flatpak}
+%global bootstrap_build false
+%else
 %ifarch %{bootstrap_arches}
 %global bootstrap_build true
 %else
 %global bootstrap_build false
+%endif
 %endif
 
 %global bootstrap_targets images
@@ -300,6 +304,8 @@
 
 # Define IcedTea version used for SystemTap tapsets and desktop file
 %global icedteaver      3.15.0
+# Define current Git revision for the FIPS support patches
+%global fipsver 8e8bbf0ff74
 
 # Standard JPackage naming and versioning defines
 %global origin          openjdk
@@ -327,9 +333,10 @@
 %endif
 
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
-%global shenandoah_project	openjdk
-%global shenandoah_repo		shenandoah-jdk8u
-%global shenandoah_revision    	shenandoah-jdk8u332-b09
+%global shenandoah_project      openjdk
+%global shenandoah_repo         shenandoah-jdk8u
+%global openjdk_revision        jdk8u332-b09
+%global shenandoah_revision     shenandoah-%{openjdk_revision}
 # Define old aarch64/jdk8u tree variables for compatibility
 %global project         %{shenandoah_project}
 %global repo            %{shenandoah_repo}
@@ -344,7 +351,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      1
+%global rpmrelease      7
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -442,6 +449,9 @@
 %global tapsetdirttapset %{tapsetroot}/tapset/
 %global tapsetdir %{tapsetdirttapset}/%{stapinstall}
 %endif
+
+# x86 is no longer supported
+ExcludeArch: %{ix86}
 
 # not-duplicated scriptlets for normal/debug packages
 %global update_desktop_icons /usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
@@ -763,10 +773,19 @@ PRIORITY=%{priority}
 if [ "%{?1}" == %{debug_suffix} ]; then
   let PRIORITY=PRIORITY-1
 fi
+  for X in %{origin} %{javaver} ; do
+    key=javadocdir_"$X"
+    alternatives --install %{_javadocdir}/java-"$X" $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $PRIORITY --family %{family_noarch}
+    %{set_if_needed_alternatives $key %{family_noarch}}
+  done
 
-key=javadocdir
-alternatives --install %{_javadocdir}/java $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $PRIORITY  --family %{family_noarch}
-%{set_if_needed_alternatives  $key %{family_noarch}}
+  key=javadocdir_%{javaver}_%{origin}
+  alternatives --install %{_javadocdir}/java-%{javaver}-%{origin} $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $PRIORITY --family %{family_noarch}
+  %{set_if_needed_alternatives  $key %{family_noarch}}
+
+  key=javadocdir
+  alternatives --install %{_javadocdir}/java $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $PRIORITY --family %{family_noarch}
+  %{set_if_needed_alternatives  $key %{family_noarch}}
 exit 0
 }
 
@@ -776,6 +795,9 @@ if [ "x$debug"  == "xtrue" ] ; then
 fi
   post_state=$1 # from postun, https://docs.fedoraproject.org/en-US/packaging-guidelines/Scriptlets/#_syntax
   %{save_and_remove_alternatives  javadocdir  %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $post_state %{family_noarch}}
+  %{save_and_remove_alternatives  javadocdir_%{origin} %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $post_state %{family_noarch}}
+  %{save_and_remove_alternatives  javadocdir_%{javaver} %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $post_state %{family_noarch}}
+  %{save_and_remove_alternatives  javadocdir_%{javaver}_%{origin} %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $post_state %{family_noarch}}
 exit 0
 }
 
@@ -787,9 +809,20 @@ PRIORITY=%{priority}
 if [ "%{?1}" == %{debug_suffix} ]; then
   let PRIORITY=PRIORITY-1
 fi
-key=javadoczip
-alternatives --install %{_javadocdir}/java-zip $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $PRIORITY  --family %{family_noarch}
-%{set_if_needed_alternatives  $key %{family_noarch}}
+  for X in %{origin} %{javaver} ; do
+    key=javadoczip_"$X"
+    alternatives --install %{_javadocdir}/java-"$X".zip $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $PRIORITY --family %{family_noarch}
+    %{set_if_needed_alternatives $key %{family_noarch}}
+  done
+
+  key=javadoczip_%{javaver}_%{origin}
+  alternatives --install %{_javadocdir}/java-%{javaver}-%{origin}.zip $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $PRIORITY --family %{family_noarch}
+  %{set_if_needed_alternatives  $key %{family_noarch}}
+
+  # Weird legacy filename for backwards-compatibility
+  key=javadoczip
+  alternatives --install %{_javadocdir}/java-zip $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $PRIORITY  --family %{family_noarch}
+  %{set_if_needed_alternatives  $key %{family_noarch}}
 exit 0
 }
 
@@ -799,6 +832,9 @@ exit 0
   fi
   post_state=$1 # from postun, https://docs.fedoraproject.org/en-US/packaging-guidelines/Scriptlets/#_syntax
   %{save_and_remove_alternatives  javadoczip  %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $post_state %{family_noarch}}
+  %{save_and_remove_alternatives  javadoczip_%{origin}  %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $post_state %{family_noarch}}
+  %{save_and_remove_alternatives  javadoczip_%{javaver}  %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $post_state %{family_noarch}}
+  %{save_and_remove_alternatives  javadoczip_%{javaver}_%{origin}  %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $post_state %{family_noarch}}
 exit 0
 }
 
@@ -1177,6 +1213,9 @@ exit 0
 %if %is_system_jdk
 %if %{is_release_build -- %{?1}}
 %ghost %{_javadocdir}/java
+%ghost %{_javadocdir}/java-%{origin}
+%ghost %{_javadocdir}/java-%{javaver}
+%ghost %{_javadocdir}/java-%{javaver}-%{origin}
 %endif
 %endif
 }
@@ -1189,6 +1228,9 @@ exit 0
 %if %is_system_jdk
 %if %{is_release_build -- %{?1}}
 %ghost %{_javadocdir}/java-zip
+%ghost %{_javadocdir}/java-%{origin}.zip
+%ghost %{_javadocdir}/java-%{javaver}.zip
+%ghost %{_javadocdir}/java-%{javaver}-%{origin}.zip
 %endif
 %endif
 }
@@ -1233,13 +1275,19 @@ Requires: tzdata-java >= 2021e
 # for support of kernel stream control
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
+%if ! 0%{?flatpak}
 # tool to copy jdk's configs - should be Recommends only, but then only dnf/yum enforce it,
 # not rpm transaction and so no configs are persisted when pure rpm -u is run. It may be
 # considered as regression
 Requires: copy-jdk-configs >= 4.0
 OrderWithRequires: copy-jdk-configs
+%endif
 # for printing support
 Requires: cups-libs
+# for FIPS PKCS11 provider
+Requires: nss
+# for system security properties
+Requires: crypto-policies
 # Post requires alternatives to install tool alternatives
 Requires(post):   %{alternatives_requires}
 # Postun requires alternatives to uninstall tool alternatives
@@ -1422,29 +1470,29 @@ Source101: config.sub
 Patch534: rh1648246-always_instruct_vm_to_assume_multiple_processors_are_available.patch
 # RH1582504: Use RSA as default for keytool, as DSA is disabled in all crypto policies except LEGACY
 Patch1003: rh1582504-rsa_default_for_keytool.patch
-
-# FIPS support patches
 # RH1648249: Add PKCS11 provider to java.security
 Patch1000: rh1648249-add_commented_out_nss_cfg_provider_to_java_security.patch
+
+# Crypto policy and FIPS support patches
+# Patch is generated from the fips tree at https://github.com/rh-openjdk/jdk11u/tree/fips
+# as follows: git diff %%{openjdk_revision} common jdk > fips-8u-$(git show -s --format=%h HEAD).patch
+# Diff is limited to src and make subdirectories to exclude .github changes
+# Fixes currently included:
+# PR3183, RH1340845: Support Fedora/RHEL8 system crypto policy
+# PR3655: Allow use of system crypto policy to be disabled by the user
 # RH1655466: Support RHEL FIPS mode using SunPKCS11 provider
-Patch1001: rh1655466-global_crypto_and_fips.patch
 # RH1760838: No ciphersuites available for SSLSocket in FIPS mode
-Patch1002: rh1760838-fips_default_keystore_type.patch
 # RH1860986: Disable TLSv1.3 with the NSS-FIPS provider until PKCS#11 v3.0 support is available
-Patch1004: rh1860986-disable_tlsv1.3_in_fips_mode.patch
 # RH1906862: Always initialise JavaSecuritySystemConfiguratorAccess
-Patch1005: rh1906862-always_initialise_configurator_access.patch
 # RH1929465: Improve system FIPS detection
-Patch1006: rh1929465-improve_system_FIPS_detection-root.patch
-Patch1007: rh1929465-improve_system_FIPS_detection-jdk.patch
 # RH1996182: Login to the NSS software token in FIPS mode
-Patch1008: rh1996182-login_to_nss_software_token.patch
 # RH1991003: Allow plain key import unless com.redhat.fips.plainKeySupport is set to false
-Patch1011: rh1991003-enable_fips_keys_import.patch
 # RH2021263: Resolve outstanding FIPS issues
-Patch1014: rh2021263-fips_ensure_security_initialised.patch
-Patch1015: rh2021263-fips_missing_native_returns.patch
-Patch1016: rh2021263-fips_separate_policy_and_fips_init.patch
+# RH2052819: Fix FIPS reliance on crypto policies
+# RH2051605: Detect NSS at Runtime for FIPS detection
+# RH2036462: sun.security.pkcs11.wrapper.PKCS11.getInstance breakage
+# RH2090378: Revert to disabling system security properties and FIPS mode support together
+Patch1001: fips-8u-%{fipsver}.patch
 
 #############################################
 #
@@ -1467,10 +1515,6 @@ Patch528: pr3083-rh1346460-for_ssl_debug_return_null_instead_of_exception_when_t
 # PR2888: OpenJDK should check for system cacerts database (e.g. /etc/pki/java/cacerts)
 # PR3575, RH1567204: System cacerts database handling should not affect jssecacerts
 Patch539: pr2888-openjdk_should_check_for_system_cacerts_database_eg_etc_pki_java_cacerts.patch
-# PR3183, RH1340845: Support Fedora/RHEL8 system crypto policy
-Patch400: pr3183-rh1340845-support_fedora_rhel_system_crypto_policy.patch
-# PR3655: Allow use of system crypto policy to be disabled by the user
-Patch401: pr3655-toggle_system_crypto_policy.patch
 # enable build of speculative store bypass hardened alt-java
 Patch600: rh1750419-redhat_alt_java.patch
 # JDK-8218811: replace open by os::open in hotspot coding
@@ -1595,8 +1639,10 @@ BuildRequires: libXinerama-devel
 BuildRequires: libXrender-devel
 BuildRequires: libXt-devel
 BuildRequires: libXtst-devel
-# Requirements for setting up the nss.cfg and FIPS support
-BuildRequires: nss-devel >= 3.53
+# Requirement for setting up nss.cfg and nss.fips.cfg
+BuildRequires: nss-devel
+# Requirement for system security property test
+BuildRequires: crypto-policies
 BuildRequires: pkgconfig
 BuildRequires: xorg-x11-proto-devel
 BuildRequires: zip
@@ -1933,10 +1979,6 @@ sh %{SOURCE12}
 %patch203
 %patch204
 
-# System security policy fixes
-%patch400
-%patch401
-
 %patch5
 
 # s390 build fixes
@@ -1963,22 +2005,17 @@ sh %{SOURCE12}
 %patch581
 %patch582
 
+pushd %{top_level_dir_name}
+# Add crypto policy and FIPS support
+%patch1001 -p1
+# nss.cfg PKCS11 support; must come last as it also alters java.security
+%patch1000 -p1
+popd
+
 # RPM-only fixes
 %patch539
 %patch600
-%patch1000
-%patch1001
-%patch1002
 %patch1003
-%patch1004
-%patch1005
-%patch1006
-%patch1007
-%patch1008
-%patch1011
-%patch1014
-%patch1015
-%patch1016
 
 # RHEL-only patches
 %if ! 0%{?fedora} && 0%{?rhel} <= 7
@@ -2109,7 +2146,7 @@ function buildjdk() {
     --with-vendor-vm-bug-url="%{oj_vendor_bug_url}" \
     --with-boot-jdk=${buildjdk} \
     --with-debug-level=${debuglevel} \
-    --enable-sysconf-nss \
+    --disable-sysconf-nss \
     --enable-unlimited-crypto \
     --with-zlib=system \
     --with-libjpeg=system \
@@ -2173,6 +2210,26 @@ function installjdk() {
 	# https://bugs.openjdk.java.net/browse/JDK-8173610
 	find ${imagepath} -iname '*.so' -exec chmod +x {} \;
 	find ${imagepath}/bin/ -exec chmod +x {} \;
+
+	# Install nss.cfg right away as we will be using the JRE above
+	install -m 644 nss.cfg ${imagepath}/jre/lib/security/
+
+	# Install nss.fips.cfg: NSS configuration for global FIPS mode (crypto-policies)
+	install -m 644 nss.fips.cfg ${imagepath}/jre/lib/security/
+
+	# Turn on system security properties
+	sed -i -e "s:^security.useSystemPropertiesFile=.*:security.useSystemPropertiesFile=true:" \
+	    ${imagepath}/jre/lib/security/java.security
+
+	# Use system-wide tzdata
+	rm ${imagepath}/jre/lib/tzdb.dat
+	ln -s %{_datadir}/javazi-1.8/tzdb.dat ${imagepath}/jre/lib/tzdb.dat
+
+	# add alt-java man page
+	pushd ${imagepath}
+	echo "Hardened java binary recommended for launching untrusted code from the Web e.g. javaws" > man/man1/%{alt_java_name}.1
+	cat man/man1/java.1 >> man/man1/%{alt_java_name}.1
+	popd
     fi
 }
 
@@ -2221,30 +2278,13 @@ else
   installjdk ${builddir} ${installdir}
 fi
 
-# Install nss.cfg right away as we will be using the JRE above
-export JAVA_HOME=$(pwd)/%{installoutputdir -- $suffix}/images/%{jdkimage}
-
-# Install nss.cfg right away as we will be using the JRE above
-install -m 644 nss.cfg $JAVA_HOME/jre/lib/security/
-
-# Install nss.fips.cfg: NSS configuration for global FIPS mode (crypto-policies)
-install -m 644 nss.fips.cfg $JAVA_HOME/jre/lib/security/
-
-# Use system-wide tzdata
-rm $JAVA_HOME/jre/lib/tzdb.dat
-ln -s %{_datadir}/javazi-1.8/tzdb.dat $JAVA_HOME/jre/lib/tzdb.dat
-
-# add alt-java man page
-pushd ${JAVA_HOME}
-echo "Hardened java binary recommended for launching untrusted code from the Web e.g. javaws" > man/man1/%{alt_java_name}.1
-cat man/man1/java.1 >> man/man1/%{alt_java_name}.1
-popd
-
 # build cycles
 done
 
 %check
-
+%ifarch %{ix86}
+  exit 0
+%endif
 # We test debug first as it will give better diagnostics on a crash
 for suffix in %{build_loop} ; do
 
@@ -2258,9 +2298,14 @@ $JAVA_HOME/bin/java TestCryptoLevel
 $JAVA_HOME/bin/javac -d . %{SOURCE14}
 $JAVA_HOME/bin/java $(echo $(basename %{SOURCE14})|sed "s|\.java||")
 
-# Check system crypto (policy) can be disabled
+# Check system crypto (policy) is active and can be disabled
+# Test takes a single argument - true or false - to state whether system
+# security properties are enabled or not.
 $JAVA_HOME/bin/javac -d . %{SOURCE15}
-$JAVA_HOME/bin/java -Djava.security.disableSystemPropertiesFile=true $(echo $(basename %{SOURCE15})|sed "s|\.java||")
+export PROG=$(echo $(basename %{SOURCE15})|sed "s|\.java||")
+export SEC_DEBUG="-Djava.security.debug=properties"
+$JAVA_HOME/bin/java ${SEC_DEBUG} ${PROG} true
+$JAVA_HOME/bin/java ${SEC_DEBUG} -Djava.security.disableSystemPropertiesFile=true ${PROG} false
 
 # Check java launcher has no SSB mitigation
 if ! nm $JAVA_HOME/bin/java | grep set_speculation ; then true ; else false; fi
@@ -2366,6 +2411,18 @@ for suffix in %{build_loop} ; do
 
 # Install the jdk
 pushd %{installoutputdir -- $suffix}/images/%{jdkimage}
+
+%ifarch %{ix86}
+  for file in $(find $(pwd) | grep -e "/bin/" -e "\.so$") ; do
+    echo "deprecating $file"
+    echo '#!/bin/bash' > $file
+    echo 'echo "We are going to remove i686 jdk. Please fix your package accordingly!"' >> $file
+    echo 'echo "See https://fedoraproject.org/wiki/Changes/Drop_i686_JDKs"' >> $file
+    echo 'echo "See https://pagure.io/fesco/issue/2772"' >> $file
+    echo 'echo "See https://bugzilla.redhat.com/show_bug.cgi?id=2083750"' >> $file
+    echo 'exit 1' >> $file
+  done
+%endif
 
 # Install jsa directories so we can owe them
 mkdir -p $RPM_BUILD_ROOT%{_jvmdir}/%{jredir -- $suffix}/lib/%{archinstall}/server/
@@ -2781,6 +2838,36 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Sun Jul 17 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.332.b09-7
+- Rebase FIPS patches from fips branch and simplify by using a single patch from that repository
+- * RH2051605: Detect NSS at Runtime for FIPS detection
+- * RH2036462: sun.security.pkcs11.wrapper.PKCS11.getInstance breakage
+- * RH2090378: Revert to disabling system security properties and FIPS mode support together
+- Turn off build-time NSS linking and go back to an explicit Requires on NSS
+- Rebase RH1648249 nss.cfg patch so it applies after the FIPS patch
+- Perform configuration changes (e.g. nss.cfg, nss.fips.cfg, tzdb.dat) in installjdk
+- Enable system security properties in the RPM (now disabled by default in the FIPS repo)
+- Improve security properties test to check both enabled and disabled behaviour
+- Run security properties test with property debugging on
+- Exclude x86 from builds as the bootstrap JDK is now completely broken and unusable
+
+* Thu Jul 14 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.332.b09-6
+- Explicitly require crypto-policies during build and runtime for system security properties
+
+* Thu Jul 14 2022 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.332.b09-5
+- Replaced binaries and .so files with bash-stubs on i686 in preparation of the removal on that architecture:
+- https://fedoraproject.org/wiki/Changes/Drop_i686_JDKs
+
+* Thu Jul 14 2022 FeRD (Frank Dana) <ferdnyc@gmail.com> - 1:1.8.0.332.b09-4
+- Add javaver- and origin-specific javadoc and javadoczip alternatives.
+
+* Fri Jul 01 2022 Stephan Bergmann <sbergman@redhat.com> - 1:1.8.0.332.b09-3
+- Disable copy-jdk-configs for Flatpak builds
+- Fix flatpak builds by exempting them from bootstrap
+
+* Thu Jun 30 2022 Francisco Ferrari Bihurriet <fferrari@redhat.com> - 1:1.8.0.332.b09-2
+- RH2007331: SecretKey generate/import operations don't add the CKA_SIGN attribute in FIPS mode
+
 * Mon Apr 18 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.332.b09-1
 - Update to shenandoah-jdk8u332-b09 (GA)
 - Update release notes for 8u332-b09.
