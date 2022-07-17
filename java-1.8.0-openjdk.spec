@@ -351,7 +351,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      7
+%global rpmrelease      2
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -2282,9 +2282,7 @@ fi
 done
 
 %check
-%ifarch %{ix86}
-  exit 0
-%endif
+
 # We test debug first as it will give better diagnostics on a crash
 for suffix in %{build_loop} ; do
 
@@ -2411,18 +2409,6 @@ for suffix in %{build_loop} ; do
 
 # Install the jdk
 pushd %{installoutputdir -- $suffix}/images/%{jdkimage}
-
-%ifarch %{ix86}
-  for file in $(find $(pwd) | grep -e "/bin/" -e "\.so$") ; do
-    echo "deprecating $file"
-    echo '#!/bin/bash' > $file
-    echo 'echo "We are going to remove i686 jdk. Please fix your package accordingly!"' >> $file
-    echo 'echo "See https://fedoraproject.org/wiki/Changes/Drop_i686_JDKs"' >> $file
-    echo 'echo "See https://pagure.io/fesco/issue/2772"' >> $file
-    echo 'echo "See https://bugzilla.redhat.com/show_bug.cgi?id=2083750"' >> $file
-    echo 'exit 1' >> $file
-  done
-%endif
 
 # Install jsa directories so we can owe them
 mkdir -p $RPM_BUILD_ROOT%{_jvmdir}/%{jredir -- $suffix}/lib/%{archinstall}/server/
@@ -2838,7 +2824,7 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
-* Sun Jul 17 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.332.b09-7
+* Sun Jul 17 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.332.b09-2
 - Rebase FIPS patches from fips branch and simplify by using a single patch from that repository
 - * RH2051605: Detect NSS at Runtime for FIPS detection
 - * RH2036462: sun.security.pkcs11.wrapper.PKCS11.getInstance breakage
@@ -2851,17 +2837,13 @@ cjc.mainProgram(args)
 - Run security properties test with property debugging on
 - Exclude x86 from builds as the bootstrap JDK is now completely broken and unusable
 
-* Thu Jul 14 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.332.b09-6
+* Thu Jul 14 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.332.b09-2
 - Explicitly require crypto-policies during build and runtime for system security properties
 
-* Thu Jul 14 2022 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.332.b09-5
-- Replaced binaries and .so files with bash-stubs on i686 in preparation of the removal on that architecture:
-- https://fedoraproject.org/wiki/Changes/Drop_i686_JDKs
-
-* Thu Jul 14 2022 FeRD (Frank Dana) <ferdnyc@gmail.com> - 1:1.8.0.332.b09-4
+* Thu Jul 14 2022 FeRD (Frank Dana) <ferdnyc@gmail.com> - 1:1.8.0.332.b09-2
 - Add javaver- and origin-specific javadoc and javadoczip alternatives.
 
-* Fri Jul 01 2022 Stephan Bergmann <sbergman@redhat.com> - 1:1.8.0.332.b09-3
+* Fri Jul 01 2022 Stephan Bergmann <sbergman@redhat.com> - 1:1.8.0.332.b09-2
 - Disable copy-jdk-configs for Flatpak builds
 - Fix flatpak builds by exempting them from bootstrap
 
