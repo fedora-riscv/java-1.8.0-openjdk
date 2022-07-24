@@ -335,7 +335,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global shenandoah_project      openjdk
 %global shenandoah_repo         shenandoah-jdk8u
-%global openjdk_revision        jdk8u332-b09
+%global openjdk_revision        jdk8u342-b07
 %global shenandoah_revision     shenandoah-%{openjdk_revision}
 # Define old aarch64/jdk8u tree variables for compatibility
 %global project         %{shenandoah_project}
@@ -351,7 +351,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      2
+%global rpmrelease      1
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -451,7 +451,11 @@
 %endif
 
 # x86 is no longer supported
+%if 0%{?java_arches:1}
+ExclusiveArch:  %{java_arches}
+%else
 ExcludeArch: %{ix86}
+%endif
 
 # not-duplicated scriptlets for normal/debug packages
 %global update_desktop_icons /usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
@@ -1270,8 +1274,8 @@ Requires: ca-certificates
 # Require javapackages-filesystem for ownership of /usr/lib/jvm/ and macros
 Requires: javapackages-filesystem
 # Require zoneinfo data provided by tzdata-java subpackage.
-# 2021e required as of JDK-8275766 in January 2022 CPU
-Requires: tzdata-java >= 2021e
+# 2022a required as of JDK-8283350 in 8u342
+Requires: tzdata-java >= 2022a
 # for support of kernel stream control
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
@@ -1653,8 +1657,8 @@ BuildRequires: java-%{buildjdkver}-openjdk-devel >= 1.7.0.151-2.6.11.3
 %ifarch %{zero_arches}
 BuildRequires: libffi-devel
 %endif
-# 2021e required as of JDK-8275766 in January 2022 CPU
-BuildRequires: tzdata-java >= 2021e
+# 2022a required as of JDK-8283350 in 8u342
+BuildRequires: tzdata-java >= 2022a
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
@@ -2230,6 +2234,10 @@ function installjdk() {
 	echo "Hardened java binary recommended for launching untrusted code from the Web e.g. javaws" > man/man1/%{alt_java_name}.1
 	cat man/man1/java.1 >> man/man1/%{alt_java_name}.1
 	popd
+
+	# Print release information
+	cat ${imagepath}/release
+
     fi
 }
 
@@ -2824,6 +2832,50 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Sun Jul 24 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.342.b07-1
+- Update to shenandoah-jdk8u342-b07 (GA)
+- Update release notes for 8u342-b07.
+- Switch to GA mode for final release.
+- Exclude x86 where java_arches is undefined, in order to unbreak build
+
+* Fri Jul 22 2022 Jiri Vanek <gnu.andrew@redhat.com> - 1:1.8.0.342.b06-0.4.ea
+- moved to build only on %%{java_arches}
+-- https://fedoraproject.org/wiki/Changes/Drop_i686_JDKs
+- reverted :
+-- Rebuilt for https://fedoraproject.org/wiki/Fedora_37_Mass_Rebuild (always mess up release)
+-- Try to build on x86 again by creating a husk of a JDK which does not depend on itself
+-- Exclude x86 from builds as the bootstrap JDK is now completely broken and unusable
+-- Reinstate demo package on x86
+-- Temporarily disable noarch status of javadoc and javadoc-zip so x86 can differ
+-- Replaced binaries and .so files with bash-stubs on i686
+- added ExclusiveArch:  %%{java_arches}
+-- this now excludes i686
+-- this is safely backport-able to older fedoras, as the macro was  backported proeprly (with i686 included)
+- https://bugzilla.redhat.com/show_bug.cgi?id=2104129
+
+* Thu Jul 21 2022 Fedora Release Engineering <releng@fedoraproject.org> - 1:1.8.0.342.b06-0.3.ea.1
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_37_Mass_Rebuild
+
+* Tue Jul 19 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.342.b06-0.3.ea
+- Reinstate demo package on x86
+
+* Mon Jul 18 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.342.b06-0.2.ea
+- Temporarily disable noarch status of javadoc and javadoc-zip so x86 can differ
+
+* Mon Jul 18 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.342.b06-0.2.ea
+- Try to build on x86 again by creating a husk of a JDK which does not depend on itself
+
+* Sun Jul 17 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.342.b06-0.1.ea
+- Update to shenandoah-jdk8u342-b06 (EA)
+- Update release notes for shenandoah-8u342-b06.
+- Switch to EA mode for 8u342 pre-release builds.
+- Print release file during build, which should now include a correct SOURCE value from .src-rev
+- Update tarball script with IcedTea GitHub URL and .src-rev generation
+- Use "git apply" with patches in the tarball script to allow binary diffs
+- Remove redundant "REPOS" variable from tarball script
+- Include script to generate bug list for release notes
+- Update tzdata requirement to 2022a to match JDK-8283350
+
 * Sun Jul 17 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.332.b09-2
 - Rebase FIPS patches from fips branch and simplify by using a single patch from that repository
 - * RH2051605: Detect NSS at Runtime for FIPS detection
