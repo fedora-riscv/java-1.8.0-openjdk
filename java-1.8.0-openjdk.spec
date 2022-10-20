@@ -26,12 +26,24 @@
 %bcond_with artifacts
 # Build a fresh libjvm.so for use in a copy of the bootstrap JDK
 %bcond_without fresh_libjvm
+# Build with system libraries
+%bcond_with system_libs
 
 # Define whether to use the bootstrap JDK directly or with a fresh libjvm.so
 %if %{with fresh_libjvm}
 %global build_hotspot_first 1
 %else
 %global build_hotspot_first 0
+%endif
+
+%if %{with system_libs}
+%global system_libs 1
+%global link_type system
+%global jpeg_lib |libjavajpeg[.]so.*
+%else
+%global system_libs 0
+%global link_type bundled
+%global jpeg_lib |libjpeg[.]so.*
 %endif
 
 # The -g flag says to use strip -g instead of full strip on DSOs or EXEs.
@@ -305,7 +317,7 @@
 # Define IcedTea version used for SystemTap tapsets and desktop file
 %global icedteaver      3.15.0
 # Define current Git revision for the FIPS support patches
-%global fipsver 8e8bbf0ff74
+%global fipsver 6d1aade0648
 
 # Standard JPackage naming and versioning defines
 %global origin          openjdk
@@ -335,7 +347,7 @@
 # note, following three variables are sedded from update_sources if used correctly. Hardcode them rather there.
 %global shenandoah_project      openjdk
 %global shenandoah_repo         shenandoah-jdk8u
-%global openjdk_revision        jdk8u345-b01
+%global openjdk_revision        jdk8u352-b08
 %global shenandoah_revision     shenandoah-%{openjdk_revision}
 # Define old aarch64/jdk8u tree variables for compatibility
 %global project         %{shenandoah_project}
@@ -395,7 +407,7 @@
 # fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349
 #         https://bugzilla.redhat.com/show_bug.cgi?id=1590796#c14
 #         https://bugzilla.redhat.com/show_bug.cgi?id=1655938
-%global _privatelibs libattach[.]so.*|libawt_headless[.]so.*|libawt[.]so.*|libawt_xawt[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libhprof[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas_unix[.]so.*|libjava_crw_demo[.]so.*|libjavajpeg[.]so.*|libjdwp[.]so.*|libjli[.]so.*|libjsdt[.]so.*|libjsoundalsa[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libnpt[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libsplashscreen[.]so.*|libsunec[.]so.*|libsystemconf[.]so.*|libunpack[.]so.*|libzip[.]so.*|lib[.]so\\(SUNWprivate_.*
+%global _privatelibs libattach[.]so.*|libawt_headless[.]so.*|libawt[.]so.*|libawt_xawt[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libhprof[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas_unix[.]so.*|libjava_crw_demo[.]so.*%{jpeg_lib}|libjdwp[.]so.*|libjli[.]so.*|libjsdt[.]so.*|libjsoundalsa[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libnpt[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libsplashscreen[.]so.*|libsunec[.]so.*|libsystemconf[.]so.*|libunpack[.]so.*|libzip[.]so.*|lib[.]so\\(SUNWprivate_.*
 %global _publiclibs libjawt[.]so.*|libjava[.]so.*|libjvm[.]so.*|libverify[.]so.*|libjsig[.]so.*
 %if %is_system_jdk
 %global __provides_exclude ^(%{_privatelibs})$
@@ -952,7 +964,11 @@ exit 0
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjaas_unix.so
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjava.so
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjava_crw_demo.so
+%if %{system_libs}
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjavajpeg.so
+%else
+%{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjpeg.so
+%endif
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjdwp.so
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjsdt.so
 %{_jvmdir}/%{jredir -- %{?1}}/lib/%{archinstall}/libjsig.so
@@ -1273,9 +1289,9 @@ Provides: jre%{?1} = %{epoch}:%{version}-%{release}
 Requires: ca-certificates
 # Require javapackages-filesystem for ownership of /usr/lib/jvm/ and macros
 Requires: javapackages-filesystem
-# Require zoneinfo data provided by tzdata-java subpackage.
-# 2022a required as of JDK-8283350 in 8u342
-Requires: tzdata-java >= 2022a
+# 2022d required as of JDK-8294357
+# Should be bumped to 2022e once available (JDK-8295173)
+Requires: tzdata-java >= 2022d
 # for support of kernel stream control
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
@@ -1454,12 +1470,14 @@ Source16: CheckVendor.java
 # nss fips configuration file
 Source17: nss.fips.cfg.in
 
+# Ensure translations are available for new timezones
+Source18: TestTranslations.java
+
 Source20: repackReproduciblePolycies.sh
 
 # New versions of config files with aarch64 support. This is not upstream yet.
 Source100: config.guess
 Source101: config.sub
-
 
 ############################################
 #
@@ -1577,13 +1595,17 @@ Patch582: jdk8282231-x86_32-missing_call_effects.patch
 
 #############################################
 #
-# Patches appearing in 8u282
+# Patches appearing in 8u362
 #
 # This section includes patches which are present
 # in the listed OpenJDK 8u release and should be
 # able to be removed once that release is out
 # and used by this RPM.
 #############################################
+# JDK-8294357: (tz) Update Timezone Data to 2022d
+Patch2002: jdk8294357-tzdata2022d.patch
+# JDK-8295173: (tz) Update Timezone Data to 2022e
+Patch2003: jdk8295173-tzdata2022e.patch
 
 #############################################
 #
@@ -1629,12 +1651,8 @@ BuildRequires: desktop-file-utils
 BuildRequires: elfutils-devel
 BuildRequires: fontconfig-devel
 BuildRequires: freetype-devel
-BuildRequires: giflib-devel
 BuildRequires: gcc-c++
 BuildRequires: gdb
-BuildRequires: lcms2-devel
-BuildRequires: libjpeg-devel
-BuildRequires: libpng-devel
 BuildRequires: libxslt
 BuildRequires: libX11-devel
 BuildRequires: libXext-devel
@@ -1657,14 +1675,35 @@ BuildRequires: java-%{buildjdkver}-openjdk-devel >= 1.7.0.151-2.6.11.3
 %ifarch %{zero_arches}
 BuildRequires: libffi-devel
 %endif
-# 2022a required as of JDK-8283350 in 8u342
-BuildRequires: tzdata-java >= 2022a
+# 2022d required as of JDK-8294357
+# Should be bumped to 2022e once available (JDK-8295173)
+BuildRequires: tzdata-java >= 2022d
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
 %if %{with_systemtap}
 BuildRequires: systemtap-sdt-devel
 %endif
+
+%if %{system_libs}
+BuildRequires: giflib-devel
+BuildRequires: lcms2-devel
+BuildRequires: libjpeg-devel
+BuildRequires: libpng-devel
+%else
+# Version in jdk/src/share/native/sun/awt/giflib/gif_lib.h
+Provides: bundled(giflib) = 5.2.1
+# Version in jdk/src/share/native/sun/java2d/cmm/lcms/lcms2.h
+Provides: bundled(lcms2) = 2.10.0
+# Version in jdk/src/share/native/sun/awt/image/jpeg/jpeglib.h
+Provides: bundled(libjpeg) = 6b
+# Version in jdk/src/share/native/sun/awt/libpng/png.h
+Provides: bundled(libpng) = 1.6.37
+# We link statically against libstdc++ to increase portability
+BuildRequires: libstdc++-static
+%endif
+# Version in jdk/src/share/native/sun/font/layout/LEStandalone.h
+Provides: bundled(icu) = 4.6
 
 # this is always built, also during debug-only build
 # when it is built in debug-only this package is just placeholder
@@ -1974,14 +2013,18 @@ cp %{SOURCE101} %{top_level_dir_name}/common/autoconf/build-aux/
 
 # OpenJDK patches
 
+%if %{system_libs}
 # Remove libraries that are linked
 sh %{SOURCE12}
+%endif
 
 # System library fixes
+%if %{system_libs}
 %patch201
 %patch202
 %patch203
 %patch204
+%endif
 
 %patch5
 
@@ -2014,6 +2057,9 @@ pushd %{top_level_dir_name}
 %patch1001 -p1
 # nss.cfg PKCS11 support; must come last as it also alters java.security
 %patch1000 -p1
+# tzdata updates targetted for 8u362
+%patch2002 -p1
+%patch2003 -p1
 popd
 
 # RPM-only fixes
@@ -2119,10 +2165,17 @@ function buildjdk() {
     local buildjdk=${2}
     local maketargets="${3}"
     local debuglevel=${4}
+    local link_opt=${5}
 
     local top_srcdir_abs_path=$(pwd)/%{top_level_dir_name}
     # Variable used in hs_err hook on build failures
     local top_builddir_abs_path=$(pwd)/${outputdir}
+
+    if [ "x${link_opt}" = "xbundled" ] ; then
+        libc_link_opt="static";
+    else
+        libc_link_opt="dynamic";
+    fi
 
     echo "Checking build JDK ${buildjdk} is operational..."
     ${buildjdk}/bin/java -version
@@ -2152,12 +2205,14 @@ function buildjdk() {
     --with-debug-level=${debuglevel} \
     --disable-sysconf-nss \
     --enable-unlimited-crypto \
-    --with-zlib=system \
-    --with-libjpeg=system \
-    --with-giflib=system \
-    --with-libpng=system \
-    --with-lcms=system \
-    --with-stdc++lib=dynamic \
+    --with-zlib=${link_opt} \
+    --with-giflib=${link_opt} \
+%if %{with system_libs}
+    --with-libjpeg=${link_opt} \
+    --with-libpng=${link_opt} \
+    --with-lcms=${link_opt} \
+%endif
+    --with-stdc++lib=${libc_link_opt} \
     --with-extra-cxxflags="$EXTRA_CPP_FLAGS" \
     --with-extra-cflags="$EXTRA_CFLAGS" \
     --with-extra-asflags="$EXTRA_ASFLAGS" \
@@ -2263,6 +2318,7 @@ builddir=%{buildoutputdir -- $suffix}
 bootbuilddir=boot${builddir}
 installdir=%{installoutputdir -- $suffix}
 bootinstalldir=boot${installdir}
+link_opt="%{link_type}"
 
 # Debug builds don't need same targets as release for
 # build speed-up. We also avoid bootstrapping these
@@ -2276,13 +2332,13 @@ else
 fi
 
 if ${run_bootstrap} ; then
-  buildjdk ${bootbuilddir} ${systemjdk} "%{bootstrap_targets}" ${debugbuild}
+  buildjdk ${bootbuilddir} ${systemjdk} "%{bootstrap_targets}" ${debugbuild} ${link_opt}
   installjdk ${bootbuilddir} ${bootinstalldir}
-  buildjdk ${builddir} $(pwd)/${bootinstalldir}/images/%{jdkimage} "${maketargets}" ${debugbuild}
+  buildjdk ${builddir} $(pwd)/${bootinstalldir}/images/%{jdkimage} "${maketargets}" ${debugbuild} ${link_opt}
   installjdk ${builddir} ${installdir}
   %{!?with_artifacts:rm -rf ${bootinstalldir}}
 else
-  buildjdk ${builddir} ${systemjdk} "${maketargets}" ${debugbuild}
+  buildjdk ${builddir} ${systemjdk} "${maketargets}" ${debugbuild} ${link_opt}
   installjdk ${builddir} ${installdir}
 fi
 
@@ -2323,10 +2379,13 @@ nm $JAVA_HOME/bin/%{alt_java_name} | grep set_speculation
 if ! nm $JAVA_HOME/bin/%{alt_java_name} | grep set_speculation ; then true ; else false; fi
 %endif
 
-
 # Check correct vendor values have been set
 $JAVA_HOME/bin/javac -d . %{SOURCE16}
 $JAVA_HOME/bin/java $(echo $(basename %{SOURCE16})|sed "s|\.java||") "%{oj_vendor}" %{oj_vendor_url} %{oj_vendor_bug_url}
+
+# Check translations are available for new timezones
+$JAVA_HOME/bin/javac -d . %{SOURCE18}
+$JAVA_HOME/bin/java $(echo $(basename %{SOURCE18})|sed "s|\.java||") JRE
 
 # Check debug symbols are present and can identify code
 find "$JAVA_HOME" -iname '*.so' -print0 | while read -d $'\0' lib
@@ -2832,6 +2891,24 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Wed Oct 19 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.352.b08-1
+- Update to shenandoah-jdk8u352-b08 (GA)
+- Update release notes for shenandoah-8u352-b08.
+- Switch to GA mode for final release.
+
+* Sun Oct 16 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.352.b07-0.2.ea
+- Update in-tree tzdata to 2022e with JDK-8294357 & JDK-8295173
+- Add test to ensure timezones can be translated
+
+* Wed Oct 12 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.352.b07-0.1.ea
+- Update to shenandoah-jdk8u352-b07 (EA)
+- Update release notes for shenandoah-8u352-b07.
+- Switch to EA mode for 8u352 pre-release builds.
+- Rebase FIPS patch against 8u352-b07
+
+* Tue Aug 30 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.345.b01-2
+- Switch to static builds, reducing system dependencies and making build more portable
+
 * Wed Aug 03 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.345.b01-1
 - Update to shenandoah-jdk8u345-b01 (GA)
 - Update release notes for 8u345-b01.
