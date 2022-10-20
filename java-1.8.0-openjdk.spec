@@ -27,7 +27,7 @@
 # Build a fresh libjvm.so for use in a copy of the bootstrap JDK
 %bcond_without fresh_libjvm
 # Build with system libraries
-%bcond_with system_libs
+%bcond_without system_libs
 
 # Define whether to use the bootstrap JDK directly or with a fresh libjvm.so
 %if %{with fresh_libjvm}
@@ -363,7 +363,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      1
+%global rpmrelease      2
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -2891,6 +2891,9 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Thu Oct 20 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.352.b08-2
+- Flip the use of system libraries back on by default, as in-tree libraries should only be used on Fedora 37+
+
 * Wed Oct 19 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.352.b08-1
 - Update to shenandoah-jdk8u352-b08 (GA)
 - Update release notes for shenandoah-8u352-b08.
