@@ -2300,7 +2300,7 @@ function installjdk() {
   # Build a fresh libjvm.so first and use it to bootstrap
   cp -LR --preserve=mode,timestamps %{bootjdk} newboot
   systemjdk=$(pwd)/newboot
-  buildjdk build/newboot ${systemjdk} %{hotspot_target} "release" "bundled"
+  buildjdk build/newboot ${systemjdk} %{hotspot_target} "release" "%{link_type}"
   mv build/newboot/hotspot/dist/jre/lib/%{archinstall}/server/libjvm.so newboot/jre/lib/%{archinstall}/server
 %else
   systemjdk=%{bootjdk}
@@ -2891,6 +2891,9 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Thu Oct 20 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.352.b08-2
+- Preliminary HotSpot build should use the same link type as the whole build
+
 * Thu Oct 20 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.352.b08-2
 - Flip the use of system libraries back on by default, as in-tree libraries should only be used on Fedora 37+
 
