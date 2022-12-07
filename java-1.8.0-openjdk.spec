@@ -27,7 +27,7 @@
 # Build a fresh libjvm.so for use in a copy of the bootstrap JDK
 %bcond_without fresh_libjvm
 # Build with system libraries
-%bcond_without system_libs
+%bcond_with system_libs
 
 # Define whether to use the bootstrap JDK directly or with a fresh libjvm.so
 %if %{with fresh_libjvm}
@@ -363,7 +363,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      2
+%global rpmrelease      3
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
@@ -2300,7 +2300,7 @@ function installjdk() {
   # Build a fresh libjvm.so first and use it to bootstrap
   cp -LR --preserve=mode,timestamps %{bootjdk} newboot
   systemjdk=$(pwd)/newboot
-  buildjdk build/newboot ${systemjdk} %{hotspot_target} "release" "%{link_type}"
+  buildjdk build/newboot ${systemjdk} %{hotspot_target} "release" "bundled"
   mv build/newboot/hotspot/dist/jre/lib/%{archinstall}/server/libjvm.so newboot/jre/lib/%{archinstall}/server
 %else
   systemjdk=%{bootjdk}
@@ -2891,6 +2891,12 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Wed Dec 07 2022 jiri Vanek <jvanek@redhat.com> - 1:1.8.0.352.b08-3
+- Flip the use of system libraries back off by default,
+  as in-tree libraries were always advertised as to be backported, once proven ok
+  That is now. In addtion, this change is now in live rhels.
+- Preliminary HotSpot build is using bundeld. (as f37)
+
 * Thu Oct 20 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.352.b08-2
 - Preliminary HotSpot build should use the same link type as the whole build
 
