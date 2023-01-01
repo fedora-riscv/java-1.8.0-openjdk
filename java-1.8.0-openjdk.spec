@@ -114,7 +114,7 @@
 # Set of architectures with a Just-In-Time (JIT) compiler
 %global jit_arches      %{aarch64} %{ix86} %{power64} sparcv9 sparc64 x86_64
 # Set of architectures which use the Zero assembler port (!jit_arches)
-%global zero_arches %{arm} ppc s390 s390x
+%global zero_arches %{arm} ppc s390 s390x riscv64
 # Set of architectures which run a full bootstrap cycle
 %global bootstrap_arches %{jit_arches} %{zero_arches}
 # Set of architectures which support SystemTap tapsets
@@ -276,6 +276,11 @@
 %ifarch sparc64
 %global archinstall sparcv9
 %global stapinstall %{_target_cpu}
+%endif
+# riscv64
+%ifarch riscv64
+%global archinstall riscv64
+%global stapinstall %{nil}
 %endif
 # Need to support noarch for srpm build
 %ifarch noarch
@@ -1397,7 +1402,7 @@ Provides: java-%{origin}-src%{?1} = %{epoch}:%{version}-%{release}
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}.%{buildver}
-Release: %{?eaprefix}%{rpmrelease}%{?extraver}%{?dist}
+Release: %{?eaprefix}%{rpmrelease}%{?extraver}.rv64%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons
 # and this change was brought into RHEL-4. java-1.5.0-ibm packages
 # also included the epoch in their virtual provides. This created a
@@ -1562,6 +1567,10 @@ Patch103: pr3593-s390_use_z_format_specifier_for_size_t_arguments_as_size_t_not_
 Patch105: jdk8199936-pr3533-enable_mstackrealign_on_x86_linux_as_well_as_x86_mac_os_x.patch
 # S390 ambiguous log2_intptr calls
 Patch107: s390-8214206_fix.patch
+
+# Add support for RISC-V (riscv64)
+Patch130: java-1.8.0-riscv-1.patch
+
 
 #############################################
 #
@@ -2035,6 +2044,9 @@ sh %{SOURCE12}
 
 # AArch64 fixes
 
+# RISC-V (riscv64) fixes
+%patch130
+
 # x86 fixes
 %patch105
 
@@ -2127,6 +2139,12 @@ sed -e "s:@NSS_LIBDIR@:%{NSS_LIBDIR}:g" %{SOURCE11} > nss.cfg
 # Setup nss.fips.cfg
 sed -e "s:@NSS_LIBDIR@:%{NSS_LIBDIR}:g" %{SOURCE17} > nss.fips.cfg
 
+%ifarch riscv64
+find %{top_level_dir_name} -name 'config.guess' -exec cp -f /usr/lib/rpm/%{_vendor}/config.guess {} \;
+find %{top_level_dir_name} -name 'config.sub' -exec cp -f /usr/lib/rpm/%{_vendor}/config.sub {} \;
+%endif
+
+
 %build
 # How many CPU's do we have?
 export NUM_PROC=%(/usr/bin/getconf _NPROCESSORS_ONLN 2> /dev/null || :)
@@ -2136,7 +2154,7 @@ export NUM_PROC=${NUM_PROC:-1}
 [ ${NUM_PROC} -gt %{?_smp_ncpus_max} ] && export NUM_PROC=%{?_smp_ncpus_max}
 %endif
 
-%ifarch s390x sparc64 alpha %{power64} %{aarch64}
+%ifarch s390x sparc64 alpha %{power64} %{aarch64} riscv64
 export ARCH_DATA_MODEL=64
 %endif
 %ifarch alpha
@@ -2431,6 +2449,7 @@ do
   fi
 done
 
+%ifnarch riscv64
 # Make sure gdb can do a backtrace based on line numbers on libjvm.so
 # javaCalls.cpp:58 should map to:
 # http://hg.openjdk.java.net/jdk8u/jdk8u/hotspot/file/ff3b27e6bcc2/src/share/vm/runtime/javaCalls.cpp#l58 
@@ -2451,6 +2470,7 @@ EOF
 
 %ifarch %{gdb_arches}
 grep 'JavaCallWrapper::JavaCallWrapper' gdb.out
+%endif
 %endif
 
 # Check src.zip has all sources. See RHBZ#1130490
@@ -2891,7 +2911,10 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
-* Wed Oct 19 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:1.8.0.352.b08-1
+* Sun Jan 01 2023 Liu Yang <Yang.Liu.sn@gmail.com> - 1:1.8.0.352.b08-1.rv64
+- Add riscv64 support from riscv.rocks
+
+* Wed Oct 19 2022 Andrew Hughes <gnu.andrew@redhat.com>
 - Update to shenandoah-jdk8u352-b08 (GA)
 - Update release notes for shenandoah-8u352-b08.
 - Switch to GA mode for final release.
