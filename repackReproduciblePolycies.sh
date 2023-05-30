@@ -17,7 +17,7 @@ fi
 d=`mktemp -d`
 NW=$d/$f
   pushd $d
-    jar  xf   $ORIG
+    unzip $ORIG
     cat $M
 #    sed -i "s/Created-By.*/Created-By: 1.7.0/g"  $M
     sed -i "s/Created-By.*/Created-By: $2/g"  $M
