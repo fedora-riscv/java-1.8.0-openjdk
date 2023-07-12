@@ -327,7 +327,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      2
+%global rpmrelease      3
 
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
@@ -952,6 +952,7 @@ exit 0
 %{_jvmdir}/%{jredir -- %{?1}}/lib/rt.jar
 %{_jvmdir}/%{jredir -- %{?1}}/lib/sound.properties
 %{_jvmdir}/%{jredir -- %{?1}}/lib/tzdb.dat
+%{_jvmdir}/%{jredir -- %{?1}}/lib/tzdb.dat.upstream
 %{_jvmdir}/%{jredir -- %{?1}}/lib/management-agent.jar
 %{_jvmdir}/%{jredir -- %{?1}}/lib/management/*
 %{_jvmdir}/%{jredir -- %{?1}}/lib/cmm/*
@@ -1889,6 +1890,10 @@ function installjdk() {
       	# Turn on system security properties
         sed -i -e "s:^security.useSystemPropertiesFile=.*:security.useSystemPropertiesFile=true:" \
              ${imagepath}/jre/lib/security/java.security
+
+        # Use system-wide tzdata
+        mv ${imagepath}/jre/lib/tzdb.dat{,.upstream}
+        ln -sv %{_datadir}/javazi-1.8/tzdb.dat ${imagepath}/jre/lib/tzdb.dat
         
         # Rename OpenJDK cacerts database
         mv ${imagepath}/jre/lib/security/cacerts{,.upstream}
@@ -2512,6 +2517,9 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Wed Jul 12 2023 Jayashree Huttanagoudar <jhuttana@redhat.com> - 1:1.8.0.372.b07-3
+- Add missing tzdata related lines
+
 * Thu Jun 01 2023 Jayashree Huttanagoudar <jhuttana@redhat.com> - 1:1.8.0.372.b07-2
 - Further chages to trigger a final build
 
