@@ -327,7 +327,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      3
+%global rpmrelease      4
 
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
@@ -1158,7 +1158,6 @@ exit 0
 %endif
 }
 
-
 %define files_demo() %{expand:
 %defattr(-,root,root,-)
 %license %{_jvmdir}/%{jredir -- %{?1}}/LICENSE
@@ -1170,13 +1169,11 @@ exit 0
 %{_jvmdir}/%{sdkdir -- %{?1}}/full_sources
 }
 
-
 %define files_javadoc() %{expand:
 %defattr(-,root,root,-)
 %doc %{_javadocdir}/%{uniquejavadocdir -- %{?1}}
 #javadoc is in jdk8 noarch, so also license file must be treated like it
-#Jaya
-#%license %{installoutputdir -- %{?1}}/images/%{jdkimage}/jre/LICENSE
+%license %{_datadir}/license/java-1.8.0-openjdk-javadoc
 %if %is_system_jdk
 %if %{is_release_build -- %{?1}}
 %ghost %{_javadocdir}/java
@@ -1191,8 +1188,7 @@ exit 0
 %defattr(-,root,root,-)
 %doc %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip
 #javadoc is in jdk8 noarch, so also license file must be treated like it
-#Jaya
-#%license %{installoutputdir -- %{?1}}/images/%{jdkimage}/jre/LICENSE
+%license %{_datadir}/license/java-1.8.0-openjdk-javadoc-zip
 %if %is_system_jdk
 %if %{is_release_build -- %{?1}}
 %ghost %{_javadocdir}/java-zip
@@ -2045,6 +2041,14 @@ pushd ${jdk_image}
   install -d -m 755 $RPM_BUILD_ROOT%{_jvmdir}/%{jredir -- $suffix}
   cp -a jre/bin jre/lib jre/{ASSEMBLY_EXCEPTION,LICENSE,THIRD_PARTY_README} $RPM_BUILD_ROOT%{_jvmdir}/%{jredir -- $suffix}
 
+  if [ "x$debugbuild" == "x" ] ; then
+      #Installing manually as its for noarch
+      install -d -m 766 $RPM_BUILD_ROOT%{_datadir}/license/java-1.8.0-openjdk-javadoc
+      cp -af jre/{ASSEMBLY_EXCEPTION,LICENSE,THIRD_PARTY_README} $RPM_BUILD_ROOT%{_datadir}/license/java-1.8.0-openjdk-javadoc
+      install -d -m 766 $RPM_BUILD_ROOT%{_datadir}/license/java-1.8.0-openjdk-javadoc-zip
+      cp -af jre/{ASSEMBLY_EXCEPTION,LICENSE,THIRD_PARTY_README} $RPM_BUILD_ROOT%{_datadir}/license/java-1.8.0-openjdk-javadoc-zip
+  fi
+
 %if %{with_systemtap}
   # Install systemtap support files
   install -dm 755 $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/tapset
@@ -2517,6 +2521,9 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Thu Jul 13 2023 Jayashree Huttanagoudar <jhuttana@redhat.com> - 1:1.8.0.372.b07-4
+- Add fix for LICENSE installation
+
 * Wed Jul 12 2023 Jayashree Huttanagoudar <jhuttana@redhat.com> - 1:1.8.0.372.b07-3
 - Add missing tzdata related lines
 
