@@ -2118,6 +2118,8 @@ cp -a ${src_image} $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources
 #rm -vf "$RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources/openjdk/test/jdk/sun/management/jmxremote/bootstrap/solaris-sparcv9/launcher"
 #JDK8 specific, binary file in sources
 rm -vr "$RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources/openjdk/jdk/test/sun/security/pkcs11/nss/lib/"
+rm -vr "$RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources/openjdk/jdk/test/sun/management/jmxremote/bootstrap/solaris-sparcv9/"
+rm -vr "$RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources/openjdk/jdk/test/java/nio/channels/spi/SelectorProvider/inheritedChannel/lib/solaris-sparcv9/"
 
 # Install desktop files
 install -d -m 755 $RPM_BUILD_ROOT%{_datadir}/{applications,pixmaps}
