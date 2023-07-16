@@ -290,7 +290,7 @@
 
 # Define vendor information used by OpenJDK
 %global oj_vendor Red Hat, Inc.
-%global oj_vendor_url "https://www.redhat.com/"
+%global oj_vendor_url https://www.redhat.com/
 # Define what url should JVM offer in case of a crash report
 # order may be important, epel may have rhel declared
 %if 0%{?epel}
@@ -2268,7 +2268,7 @@ if ! nm $JAVA_HOME/bin/%{alt_java_name} | grep set_speculation ; then true ; els
 
 # Check correct vendor values have been set
 $JAVA_HOME/bin/javac -d . %{SOURCE16}
-$JAVA_HOME/bin/java $(echo $(basename %{SOURCE16})|sed "s|\.java||") "%{oj_vendor}" %{oj_vendor_url} %{oj_vendor_bug_url}
+$JAVA_HOME/bin/java $(echo $(basename %{SOURCE16})|sed "s|\.java||") "%{oj_vendor}" "%{oj_vendor_url}" "%{oj_vendor_bug_url}"
 
 # Check translations are available for new timezones
 $JAVA_HOME/bin/javac -d . %{SOURCE18}
@@ -2538,6 +2538,7 @@ cjc.mainProgram(args)
 - Return release and NEWS missing lines
 - Copy jdk_image and clean-up redundant lines
 - Uncommented few lines which were parked earlier
+- Fix quotes around vendor information strings
 
 * Thu Jul 13 2023 Jayashree Huttanagoudar <jhuttana@redhat.com> - 1:1.8.0.372.b07-5
 - Return missing README.md installation
