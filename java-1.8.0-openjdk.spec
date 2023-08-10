@@ -2536,7 +2536,7 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
-* Tue Aug 10 2023 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.382.b05-2
+* Thu Aug 10 2023 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.382.b05-2
 - removed .so files from full_sources
 - list executbales in same
 
