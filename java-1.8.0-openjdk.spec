@@ -327,7 +327,7 @@
 %global updatever       %(VERSION=%{whole_update}; echo ${VERSION##*u})
 # eg jdk8u60-b27 -> b27
 %global buildver        %(VERSION=%{version_tag}; echo ${VERSION##*-})
-%global rpmrelease      3
+%global rpmrelease      4
 
 # Define milestone (EA for pre-releases, GA ("fcs") for releases)
 # Release will be (where N is usually a number starting at 1):
@@ -2075,11 +2075,10 @@ rm -vf "$RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources/*/test/jdk/s
 find "$RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources/" -type f -name "*.so" -exec rm -vf {} \;
 find "$RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources/" -type f -executable
 rm -vr $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources/*/jdk/test/sun/security/pkcs11/nss/lib/
-rm -vrf $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources/*/jdk/test/sun/management/jmxremote/botstrap/solaris-sparcv9/
+rm -vr $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources/*/jdk/test/sun/management/jmxremote/bootstrap/solaris-sparcv9/
 rm -vr $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources/*/jdk/test/java/nio/channels/spi/SelectorProvider/inheritedChannel/lib/solaris-sparcv9/
 rm -vr $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources/*/jdk/test/java/nio/channels/spi/SelectorProvider/inheritedChannel/lib/linux-i586/
 rm -vr $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources/*/jdk/test/java/nio/channels/spi/SelectorProvider/inheritedChannel/lib/solaris-amd64/
-
 # Install the jdk
 pushd ${jdk_image}
 
@@ -2559,6 +2558,12 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Fri Sep 29 2023 Yaakov Selkowitz <yselkowi@redhat.com> - 1:1.8.0.392.b08-4
+- updated to jdk8u392+b08
+- adjsuted to use unstripped portables
+- temporarily manually turned off debuginfo
+- returned setup macro
+
 * Fri Sep 29 2023 Yaakov Selkowitz <yselkowi@redhat.com> - 1:1.8.0.382.b05-3
 - Fix flatpak build by handling different installation prefixes of package dependencies
 
