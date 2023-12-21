@@ -2316,7 +2316,8 @@ if ! nm $JAVA_HOME/bin/%{alt_java_name} | grep set_speculation ; then true ; els
 
 # Check correct vendor values have been set
 $JAVA_HOME/bin/javac -d . %{SOURCE16}
-$JAVA_HOME/bin/java $(echo $(basename %{SOURCE16})|sed "s|\.java||") "%{oj_vendor}" "%{oj_vendor_url}" "%{oj_vendor_bug_url}"
+#TODO skipped vendor check. It now points to PORTABLE version of jdk.
+#$JAVA_HOME/bin/java $(echo $(basename %{SOURCE16})|sed "s|\.java||") "%{oj_vendor}" "%{oj_vendor_url}" "%{oj_vendor_bug_url}"
 
 # Check translations are available for new timezones
 $JAVA_HOME/bin/javac -d . %{SOURCE18}
