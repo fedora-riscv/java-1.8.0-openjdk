@@ -102,7 +102,7 @@
 # Set of architectures with a Just-In-Time (JIT) compiler
 %global jit_arches      %{aarch64} %{ix86} %{power64} sparcv9 sparc64 x86_64
 # Set of architectures which use the Zero assembler port (!jit_arches)
-%global zero_arches %{arm} ppc s390 s390x
+%global zero_arches %{arm} ppc s390 s390x riscv64
 # Set of architectures which run a full bootstrap cycle
 %global bootstrap_arches %{jit_arches} %{zero_arches}
 # Set of architectures which support SystemTap tapsets
@@ -237,6 +237,11 @@
 %ifarch sparc64
 %global archinstall sparcv9
 %global stapinstall %{_target_cpu}
+%endif
+# 64 bit RISC-V
+%ifarch riscv64
+%global archinstall riscv64
+%global stapinstall %{nil}
 %endif
 # Need to support noarch for srpm build
 %ifarch noarch
@@ -1355,7 +1360,7 @@ Provides: java-%{origin}-src%{?1} = %{epoch}:%{version}-%{release}
 
 Name:    java-%{javaver}-%{origin}
 Version: %{javaver}.%{updatever}.%{buildver}
-Release: %{?eaprefix}%{rpmrelease}%{?extraver}%{?dist}
+Release: %{?eaprefix}%{rpmrelease}%{?extraver}.rv64%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons
 # and this change was brought into RHEL-4. java-1.5.0-ibm packages
 # also included the epoch in their virtual provides. This created a
@@ -2581,6 +2586,9 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Wed Dec 27 2023 Liu Yang <Yang.Liu.sn@gmail.com> - 1:1.8.0.392.b08-6.rv64
+- Add riscv64.
+
 * Sat Dec 09 2023 Jiri Vanek <jvanek@redhat.com> - 1:1.8.0.392.b08-6
 - repacking renamed portable tarballs, thus making the regex more geenric again
 
